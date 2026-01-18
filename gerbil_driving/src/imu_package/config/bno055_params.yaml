@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    # I2C Configuration
+    i2c_bus: 7            # Based on your i2cdetect results
+    i2c_address: 0x28     # Based on your i2cdetect results
+    
+    # Publishing rate in Hz
+    publish_rate: 50.0
+    
+    # Frame ID for the IMU
+    frame_id: 'imu_link'
