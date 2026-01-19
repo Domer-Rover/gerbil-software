@@ -1,6 +1,6 @@
 controller_manager: 
   ros__parameters:
-    update_rate: 50
+    update_rate: 100 # Hz
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -12,27 +12,35 @@ diff_drive_controller:
   ros__parameters: 
     left_wheel_names: ["base_left_wheel_joint"]
     right_wheel_names: ["base_right_wheel_joint"]
-
     wheel_separation: 0.45 # width + half of the length of wheels * 2
     wheel_radius: 0.1
+    wheel_separation_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.0
+    right_wheel_radius_multiplier: 1.0
+    # this only changes if the radiuses are different
 
+    # I do not know much from this section
+    publish_rate: 100.0 # Hz
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
-
     pose_covariance_diagonal: [0.001, 0.001, 0.001, 99999.0, 99999.0, 0.03] # default values on github repo
     twist_covariance_diagonal: [0.001, 0.001, 0.001, 99999.0, 99999.0, 0.03]
-
     enable_odom_tf: true
-    publish_rate: 50
+    open_loop: true
+    cmd_vel_timeout: 0.1
+    use_stamped_vel: false
 
+    # limits that we configure it
     linear.x.has_velocity_limits: true
     linear.x.max_velocity: 1.0
     linear.x.min_velocity: -1.0
+    linear.x.has_acceleration_limits: true
+    linear.x.max_acceleration: 1.0
     angular.z.has_velocity_limits: true
     angular.z.max_velocity: 1.0
     angular.z.min_velocity: -1.0
-
-    # check repo for more parameters (like velocity and acceleration limits)
+    angular.z.has_acceleration_limits: true
+    angular.z.max_acceleration: 1.0
 
 joint_state_broadcaster:
   ros__parameters:
