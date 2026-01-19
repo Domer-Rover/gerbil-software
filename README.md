@@ -7,11 +7,13 @@ Welcome to the software repo for the Gerbil navigation robot! This document will
 
 - **.github**
   _CI pipeline and PR/issue templates_
-- **cmake**
-  _CMake files to aid with building_
+- **gerbil_bringup**
+  _Bringup node to starting launch files/SM_
+- **gerbil_description**
+  _Hardware Description for ros2\_control_
 - **gerbil_driving**
   _Driving package_
-- **.gerbil_description**
-  _Hardware Description for ros2\_control_
-- **.gerbil_hw**
+- **gerbil_hw**
   _Hardware Interface for ros2\_control_
+- **vendors**
+  _External libraries, packages, forks_
