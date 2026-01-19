@@ -1,0 +1,14 @@
+services:
+  ros-dev:
+    build: .
+    container_name: gerbil-container
+    ports:
+      - "6080:80"
+    shm_size: '512m'
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - .:/home/ubuntu/ros2_ws/src
+    
+    # Start command (keeps the container running)
+    command: /bin/bash -c "supervisord -c /etc/supervisor/supervisord.conf"

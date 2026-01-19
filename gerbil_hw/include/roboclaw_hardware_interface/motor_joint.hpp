@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GERBIL_HW__MOTOR_JOINT_HPP_
-#define GERBIL_HW__MOTOR_JOINT_HPP_
+#ifndef ROBOCLAW_HARDWARE_INTERFACE__MOTOR_JOINT_HPP_
+#define ROBOCLAW_HARDWARE_INTERFACE__MOTOR_JOINT_HPP_
 
 #include <math.h>
 
@@ -60,4 +60,4 @@ public:
 };
 }  // namespace roboclaw_hardware_interface
 
-#endif  // GERBIL_HW__MOTOR_JOINT_HPP_
+#endif  // ROBOCLAW_HARDWARE_INTERFACE__MOTOR_JOINT_HPP_

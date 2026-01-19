@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GERBIL_HW__ROBOCLAW_HARDWARE_INTERFACE_HPP_
-#define GERBIL_HW__ROBOCLAW_HARDWARE_INTERFACE_HPP_
+#ifndef ROBOCLAW_HARDWARE_INTERFACE__ROBOCLAW_HARDWARE_INTERFACE_HPP_
+#define ROBOCLAW_HARDWARE_INTERFACE__ROBOCLAW_HARDWARE_INTERFACE_HPP_
 
 #include <map>
 #include <string>
@@ -22,8 +22,9 @@
 #include <roboclaw_serial/interface.hpp>
 
 #include "hardware_interface/system_interface.hpp"
-#include "gerbil_hw/motor_joint.hpp"
-#include "gerbil_hw/roboclaw_unit.hpp"
+
+#include "roboclaw_hardware_interface/motor_joint.hpp"
+#include "roboclaw_hardware_interface/roboclaw_unit.hpp"
 
 using hardware_interface::CallbackReturn;
 using hardware_interface::CommandInterface;
@@ -131,4 +132,4 @@ private:
 };
 }  // namespace roboclaw_hardware_interface
 
-#endif  // GERBIL_HW__ROBOCLAW_HARDWARE_INTERFACE_HPP_
+#endif  // ROBOCLAW_HARDWARE_INTERFACE__ROBOCLAW_HARDWARE_INTERFACE_HPP_

@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gerbil_hw/roboclaw_hardware_interface.hpp"
-
 #include <iostream>
+#include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
 #include <roboclaw_serial/device.hpp>
 
 namespace roboclaw_hardware_interface
