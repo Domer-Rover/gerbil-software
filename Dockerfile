@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     ros-humble-rviz2 \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
+    ros-noetic-teleop-twist-keyboard \
     libserial-dev \
     && rm -rf /var/lib/apt/lists/*
 
