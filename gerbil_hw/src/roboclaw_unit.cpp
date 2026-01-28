@@ -52,6 +52,20 @@ void RoboClawUnit::read()
   if (joints[1]) {
     joints[1]->setPositionState(m2_ticks);
   }
+
+  // Read and update velocity for M1
+  interface_->read(encoder_speed_m1_, address_);
+  const auto & [m1_speed, m1_status] = encoder_speed_m1_.fields;
+  if (joints[0]) {
+    joints[0]->setVelocityState(m1_speed);
+  }
+
+  // Read and update velocity for M2
+  interface_->read(encoder_speed_m2_, address_);
+  const auto & [m2_speed, m2_status] = encoder_speed_m2_.fields;
+  if (joints[1]) {
+    joints[1]->setVelocityState(m2_speed);
+  }
 }
 
 // Write the tick rate request to the roboclaw and update

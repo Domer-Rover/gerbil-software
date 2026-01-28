@@ -65,6 +65,7 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
+        state_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityStatePtr());
       }
     }
   }
@@ -115,11 +116,12 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
               ". Only velocity command interfaces are supported.");
     }
 
-    // We currently only support position state interfaces
-    if (joint.state_interfaces.size() != 1 || joint.state_interfaces[0].name != "position") {
-      throw std::runtime_error(
-              "Invalid state interface for " + joint.name +
-              ". Only position state interfaces are supported.");
+    for (const auto & interface : joint.state_interfaces) {
+      if (interface.name != "position" && interface.name != "velocity") {
+        throw std::runtime_error(
+              "Invalid state interface '" + interface.name + "' for " + joint.name +
+              ". Only 'position' and 'velocity' state interfaces are supported.");
+      }
     }
 
     // Capture and validate parameters

@@ -46,6 +46,8 @@ private:
   // RoboClaw serial driver messages
   roboclaw_serial::DriveM1M2WithSignedSpeed tick_rate_command_;
   roboclaw_serial::EncoderCounters encoder_state_;
+  roboclaw_serial::ReadSpeedM1 encoder_speed_m1_;
+  roboclaw_serial::ReadSpeedM2 encoder_speed_m2_;
 };
 }  // namespace roboclaw_hardware_interface
 

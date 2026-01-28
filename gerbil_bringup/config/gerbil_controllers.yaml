@@ -23,7 +23,7 @@ diff_drive_controller:
     publish_rate: 100.0 # Hz
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
-    pose_covariance_diagonal: [0.001, 0.001, 0.001, 99999.0, 99999.0, 0.03] # default values on github repo
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 99999.0, 99999.0, 0.03] # default values on github repo maybe not needed
     twist_covariance_diagonal: [0.001, 0.001, 0.001, 99999.0, 99999.0, 0.03]
     enable_odom_tf: true
     open_loop: true

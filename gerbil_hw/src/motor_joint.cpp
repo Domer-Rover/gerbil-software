@@ -40,4 +40,10 @@ void MotorJoint::setPositionState(const int32_t & encoder_count)
   // Store the prior encoder count for next time
   prior_encoder_count_ = encoder_count;
 }
+
+void MotorJoint::setVelocityState(const int32_t & encoder_speed)
+{
+  // Convert EncCounts/Sec directly to Radians/Sec
+    velocity_state_ = static_cast<double>(encoder_speed) / ticks_per_radian_;
+}
 }  // namespace roboclaw_hardware_interface

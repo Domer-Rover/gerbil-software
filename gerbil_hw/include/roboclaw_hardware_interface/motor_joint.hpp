@@ -35,6 +35,9 @@ private:
   // Position of the wheel in radians
   double position_state_ = 0;
 
+  // Velocity of the wheel in radians per second
+  double velocity_state_ = 0; 
+
   // Store the prior encoder count for updating position state
   int32_t prior_encoder_count_;
   bool initialized_encoder_count_ = false;
@@ -51,11 +54,13 @@ public:
   // Return the tick rate required to execute the current velocity command
   int32_t getTickRateCommand() const;
 
-  // Set the position given the current wheel encoder count
+  // Set the position and velocity given the current wheel encoder count
   void setPositionState(const int32_t & encoder_count);
+  void setVelocityState(const int32_t & encoder_count);
 
   // Accessor methods to enable ros2_control to access joint interface pointers
   inline double * getPositionStatePtr() {return &position_state_;}
+  inline double * getVelocityStatePtr() {return &velocity_state_;} 
   inline double * getVelocityCommandPtr() {return &velocity_command_;}
 };
 }  // namespace roboclaw_hardware_interface
