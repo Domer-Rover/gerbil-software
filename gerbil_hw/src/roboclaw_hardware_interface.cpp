@@ -16,6 +16,13 @@
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
 #include <roboclaw_serial/device.hpp>
 
+// TODO: Verify teleop_twist_keyboard scaling for your robot!
+//       - Check diff_drive_controller params: wheel_radius and wheel_separation must be accurate
+//       - teleop_twist_keyboard sends Twist messages (linear.x in m/s, angular.z in rad/s)
+//       - The controller converts these to wheel velocities using your robot's geometry
+//       - If wheels spin too fast/slow, check these parameters in your controller config YAML
+//       - Also verify the speed scaling in teleop_twist_keyboard launch (default may be too high)
+
 namespace roboclaw_hardware_interface
 {
 
@@ -141,6 +148,11 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     }
 
     // Get the tick count per wheel rotation value
+    // TODO: Verify qppr (Quadrature Pulses Per Revolution) matches your actual encoder!
+    //       - Check your encoder datasheet for CPR (Counts Per Revolution)
+    //       - For quadrature encoders: qppr = CPR * 4 (due to quadrature decoding)
+    //       - Wrong qppr causes incorrect velocity scaling and erratic motor behavior
+    //       - Common values: 360, 1440, 2048, 4096 for various encoders
     int qppr;
     try {
       qppr = stoi(joint.parameters.at("qppr"));

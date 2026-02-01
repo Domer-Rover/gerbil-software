@@ -14,6 +14,9 @@
 
 #include "roboclaw_hardware_interface/motor_joint.hpp"
 
+#include <cmath>
+#include <limits>
+
 namespace roboclaw_hardware_interface
 {
 
@@ -24,7 +27,25 @@ MotorJoint::MotorJoint(const std::string joint_name, const int32_t qppr)
 
 int32_t MotorJoint::getTickRateCommand() const
 {
-  return static_cast<int32_t>(velocity_command_ * ticks_per_radian_);
+  // Guard against NaN or infinity which would cause undefined behavior on cast
+  if (!std::isfinite(velocity_command_)) {
+    return 0;
+  }
+  
+  double tick_rate = velocity_command_ * ticks_per_radian_;
+  
+  // Clamp to int32_t range to prevent overflow
+  constexpr double max_tick_rate = static_cast<double>(std::numeric_limits<int32_t>::max());
+  constexpr double min_tick_rate = static_cast<double>(std::numeric_limits<int32_t>::min());
+  
+  if (tick_rate > max_tick_rate) {
+    return std::numeric_limits<int32_t>::max();
+  }
+  if (tick_rate < min_tick_rate) {
+    return std::numeric_limits<int32_t>::min();
+  }
+  
+  return static_cast<int32_t>(tick_rate);
 }
 
 // Set the position given the current wheel encoder count

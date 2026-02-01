@@ -14,7 +14,9 @@
 
 #include "roboclaw_hardware_interface/roboclaw_unit.hpp"
 
+#include <iostream>
 #include <map>
+#include <stdexcept>
 #include <roboclaw_serial/command.hpp>
 #include <roboclaw_serial/interface.hpp>
 
@@ -37,39 +39,54 @@ RoboClawUnit::RoboClawUnit(
 }
 
 // Read the encoder counts from the roboclaw and update position state
-void RoboClawUnit::read()
+bool RoboClawUnit::read()
 {
-  // Read and update position
-  interface_->read(encoder_state_, address_);
+  try {
+    // Read and update position
+    interface_->read(encoder_state_, address_);
 
-  // Get constant references to fields in the encoder counts message
-  const auto & [m1_ticks, m2_ticks] = encoder_state_.fields;
+    // Get constant references to fields in the encoder counts message
+    const auto & [m1_ticks, m2_ticks] = encoder_state_.fields;
 
-  // Convert tick counts to position states for each field if the corresponding joint exists
-  if (joints[0]) {
-    joints[0]->setPositionState(m1_ticks);
-  }
-  if (joints[1]) {
-    joints[1]->setPositionState(m2_ticks);
-  }
+    // Convert tick counts to position states for each field if the corresponding joint exists
+    if (joints[0]) {
+      joints[0]->setPositionState(m1_ticks);
+    }
+    if (joints[1]) {
+      joints[1]->setPositionState(m2_ticks);
+    }
 
-  // Read and update velocity for M1
-  interface_->read(encoder_speed_m1_, address_);
-  const auto & [m1_speed, m1_status] = encoder_speed_m1_.fields;
-  if (joints[0]) {
-    joints[0]->setVelocityState(m1_speed);
-  }
+    // Read and update velocity for M1
+    interface_->read(encoder_speed_m1_, address_);
+    const auto & [m1_speed, m1_status] = encoder_speed_m1_.fields;
+    if (joints[0]) {
+      joints[0]->setVelocityState(m1_speed);
+    }
 
-  // Read and update velocity for M2
-  interface_->read(encoder_speed_m2_, address_);
-  const auto & [m2_speed, m2_status] = encoder_speed_m2_.fields;
-  if (joints[1]) {
-    joints[1]->setVelocityState(m2_speed);
+    // Read and update velocity for M2
+    interface_->read(encoder_speed_m2_, address_);
+    const auto & [m2_speed, m2_status] = encoder_speed_m2_.fields;
+    if (joints[1]) {
+      joints[1]->setVelocityState(m2_speed);
+    }
+    
+    return true;
+  } catch (const std::logic_error & e) {
+    // CRC mismatch or communication error - log and continue
+    std::cerr << "[RoboClawUnit] Serial read error on address 0x" 
+              << std::hex << static_cast<int>(address_) << std::dec 
+              << ": " << e.what() << std::endl;
+    return false;
+  } catch (const std::exception & e) {
+    std::cerr << "[RoboClawUnit] Unexpected error during read on address 0x" 
+              << std::hex << static_cast<int>(address_) << std::dec 
+              << ": " << e.what() << std::endl;
+    return false;
   }
 }
 
 // Write the tick rate request to the roboclaw and update
-void RoboClawUnit::write()
+bool RoboClawUnit::write()
 {
   // Get references to fields in the tick rate command message
   auto & [m1_speed, m2_speed] = tick_rate_command_.fields;
@@ -82,7 +99,22 @@ void RoboClawUnit::write()
     m2_speed = joints[1]->getTickRateCommand();
   }
 
-  // Write the rate request to the roboclaw driver
-  interface_->write(tick_rate_command_, address_);
+  try {
+    // Write the rate request to the roboclaw driver
+    interface_->write(tick_rate_command_, address_);
+    return true;
+  } catch (const std::logic_error & e) {
+    // ACK not received or communication error - motors may not have received command!
+    std::cerr << "[RoboClawUnit] Serial write error on address 0x" 
+              << std::hex << static_cast<int>(address_) << std::dec 
+              << ": " << e.what() 
+              << " - MOTORS MAY NOT HAVE RECEIVED VELOCITY COMMAND!" << std::endl;
+    return false;
+  } catch (const std::exception & e) {
+    std::cerr << "[RoboClawUnit] Unexpected error during write on address 0x" 
+              << std::hex << static_cast<int>(address_) << std::dec 
+              << ": " << e.what() << std::endl;
+    return false;
+  }
 }
 }  // namespace roboclaw_hardware_interface

@@ -39,7 +39,7 @@ private:
   double velocity_state_ = 0; 
 
   // Store the prior encoder count for updating position state
-  int32_t prior_encoder_count_;
+  int32_t prior_encoder_count_ = 0;
   bool initialized_encoder_count_ = false;
 
 public:
