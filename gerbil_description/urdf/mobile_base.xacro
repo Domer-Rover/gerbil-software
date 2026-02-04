@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <!-- ==================== ROBOT DIMENSIONS ==================== -->
-    <!-- TODO: Update these values with actual measurements from your robot -->
+    <!-- TODO Update these values with actual measurements from your robot -->
     <xacro:property name="base_length" value="0.6" />      <!-- meters (front to back) -->
     <xacro:property name="base_width" value="0.4" />       <!-- meters (side to side, excluding wheels) -->
     <xacro:property name="base_height" value="0.2" />      <!-- meters -->
@@ -147,7 +147,7 @@
     </joint>
 
     <!-- IMU mounted on top of base_link -->
-    <!-- TODO: Adjust xyz to match actual IMU position on your robot -->
+    <!-- TODO Adjust xyz to match actual IMU position on your robot -->
     <joint name="imu_joint" type="fixed">
         <parent link="base_link" />
         <child link="imu_link" />
