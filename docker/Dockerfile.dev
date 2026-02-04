@@ -1,0 +1,75 @@
+# Development image with VNC for Mac/Windows
+# Includes GUI, ZED2i support, and simulation tools
+FROM tiryoh/ros2-desktop-vnc:humble
+
+USER root
+
+# Install ROS2 packages and dependencies
+RUN apt-get update && apt-get install -y \
+    nano \
+    git \
+    python3-pip \
+    wget \
+    # ROS2 control
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
+    ros-humble-controller-manager \
+    ros-humble-hardware-interface \
+    ros-humble-diff-drive-controller \
+    ros-humble-joint-state-broadcaster \
+    # Robot description
+    ros-humble-xacro \
+    ros-humble-robot-state-publisher \
+    ros-humble-joint-state-publisher \
+    ros-humble-joint-state-publisher-gui \
+    # Visualization
+    ros-humble-rviz2 \
+    # Navigation
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
+    # Teleoperation
+    ros-humble-teleop-twist-keyboard \
+    # TurtleBot3 (for Nav2 tutorials)
+    ros-humble-turtlebot3* \
+    # Gazebo simulation (will install on amd64, may fail on arm64)
+    ros-humble-gazebo-ros-pkgs \
+    ros-humble-ros-gz \
+    # Serial communication
+    libserial-dev \
+    && rm -rf /var/lib/apt/lists/* || true
+
+# Install ZED SDK only on amd64 (Intel/AMD - Windows/Linux)
+# NOTE: Apple Silicon users - This will be skipped. You can still:
+#   - Build and test everything else (ros2_control, Nav2, RViz)
+#   - Build the ZED wrapper code (won't have camera drivers)
+#   - Test ZED on Jetson or Windows machines with Intel/AMD CPUs
+ARG TARGETPLATFORM
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] || [ "$(uname -m)" = "x86_64" ]; then \
+    echo "Installing ZED SDK for amd64..." && \
+    wget -q --no-check-certificate -O ZED_SDK_Linux.run \
+    https://download.stereolabs.com/zedsdk/4.0/cu118/ubuntu22 && \
+    chmod +x ZED_SDK_Linux.run && \
+    ./ZED_SDK_Linux.run -- silent skip_tools && \
+    rm ZED_SDK_Linux.run; \
+    else \
+    echo "️   Skipping ZED SDK on ARM64 (not supported by Stereolabs)"; \
+    echo "   You can still develop ros2_control, Nav2, and other features."; \
+    echo "   ZED camera testing and gazebo simulation requires Intel/AMD or Jetson hardware."; \
+    fi
+
+# Set TurtleBot3 model for Nav2 tutorials
+ENV TURTLEBOT3_MODEL=waffle
+
+# Source ROS2 setup in bashrc for convenience
+RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc && \
+    echo "export TURTLEBOT3_MODEL=waffle" >> /etc/bash.bashrc
+
+# Install Python packages
+RUN pip3 install --no-cache-dir \
+    numpy \
+    pandas \
+    basicmicro \
+    pyserial
+
+# Note: ZED ROS2 wrapper is in vendors/zed-ros2-wrapper submodule
+# and will be built with colcon in the workspace

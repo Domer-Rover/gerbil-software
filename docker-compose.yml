@@ -1,14 +1,34 @@
 services:
+  # Development container with VNC (personal device development use) 
   ros-dev:
-    build: .
-    container_name: gerbil-container
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.dev
+    container_name: gerbil-dev
     ports:
       - "6080:80"
     shm_size: '512m'
     security_opt:
       - seccomp:unconfined
     volumes:
-      - .:/home/ubuntu/ros2_ws/src
-    
-    # Start command (keeps the container running)
+      - .:/home/ubuntu/ros2_ws/src/gerbil-software
+    # Uncomment to use ZED2i (only use zed2i on dev, because it uses usb connection, which most laptops have)
+    # devices:
+    #   - /dev/video0:/dev/video0
     command: /bin/bash -c "supervisord -c /etc/supervisor/supervisord.conf"
+
+  # Headless container for Jetson
+  ros-jetson:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.jetson
+    container_name: gerbil-jetson
+    network_mode: host
+    privileged: true
+    volumes:
+      - .:/root/ros2_ws/src/gerbil-software
+    devices:
+      - /dev/ttyTHS1:/dev/ttyTHS1  # RoboClaw motor controller
+      - /dev/video0:/dev/video0    # ZED2i camera
+      - /dev/i2c-1:/dev/i2c-1      # IMU (using I2C)
+    command: /bin/bash -c "tail -f /dev/null"
