@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev
+      network: host  # Use host network during build to avoid iptables issues on macOS
     container_name: gerbil-dev
     ports:
       - "6080:80"
