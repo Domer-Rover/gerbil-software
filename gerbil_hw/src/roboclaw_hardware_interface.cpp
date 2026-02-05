@@ -12,20 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
-#include <rclcpp/rclcpp.hpp>
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
+
+#include <iostream>
 #include <roboclaw_serial/device.hpp>
-
-// DEBUG BUILD MARKER - Remove after testing
-#warning "DEBUG VERSION WITH WRITE LOGGING ENABLED"
-
-// TODO: Verify teleop_twist_keyboard scaling for your robot!
-//       - Check diff_drive_controller params: wheel_radius and wheel_separation must be accurate
-//       - teleop_twist_keyboard sends Twist messages (linear.x in m/s, angular.z in rad/s)
-//       - The controller converts these to wheel velocities using your robot's geometry
-//       - If wheels spin too fast/slow, check these parameters in your controller config YAML
-//       - Also verify the speed scaling in teleop_twist_keyboard launch (default may be too high)
 
 namespace roboclaw_hardware_interface
 {
@@ -82,7 +72,6 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
-        state_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityStatePtr());
       }
     }
   }
@@ -104,12 +93,6 @@ std::vector<CommandInterface> RoboClawHardwareInterface::export_command_interfac
 
 return_type RoboClawHardwareInterface::write(const rclcpp::Time &, const rclcpp::Duration &)
 {
-  static int write_count = 0;
-  if (++write_count % 20 == 0) {
-    RCLCPP_INFO(rclcpp::get_logger("RoboClawHardwareInterface"), 
-                "=== write() called %d times ===", write_count);
-  }
-  
   for (auto & roboclaw : roboclaw_units_) {
     roboclaw.write();
   }
@@ -118,12 +101,6 @@ return_type RoboClawHardwareInterface::write(const rclcpp::Time &, const rclcpp:
 
 return_type RoboClawHardwareInterface::read(const rclcpp::Time &, const rclcpp::Duration &)
 {
-  static int read_count = 0;
-  if (++read_count % 20 == 0) {
-    RCLCPP_INFO(rclcpp::get_logger("RoboClawHardwareInterface"), 
-                "=== read() called %d times ===", read_count);
-  }
-  
   for (auto & roboclaw : roboclaw_units_) {
     roboclaw.read();
   }
