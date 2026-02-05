@@ -204,6 +204,14 @@ using MainBatteryVoltageCutoff =
 // analog range.
 using EncoderCounters = Request<Command::READ_M1_M2_ENC, Command::NONE, int32_t, int32_t>;
 
+// Read M1 encoder count (single)
+// Returns: Count (int32_t), Status (uint8_t)
+using ReadEncM1 = Request<Command::READ_M1_ENC, Command::NONE, int32_t, uint8_t>;
+
+// Read M2 encoder count (single)
+// Returns: Count (int32_t), Status (uint8_t)
+using ReadEncM2 = Request<Command::READ_M2_ENC, Command::NONE, int32_t, uint8_t>;
+
 // Several motor and quadrature combinations can be used with RoboClaw.
 // In some cases the default PID values will need to be tuned for the
 // systems being driven. This gives greater flexibility in what motor and
@@ -228,13 +236,10 @@ using VelocityPIDConstantsM2 = Request<
 using DriveM1M2WithSignedSpeed =
   Request<Command::NONE, Command::DRIVE_M1_M2_SGN_SPD, int32_t, int32_t>;
 
-// Read M1 Speed in Encoder Counts Per Second
-// Returns: Speed (int32_t), Status (uint8_t)
-// Status indicates direction (0=Forward, 1=Backward) usually, or valid flag.
-using ReadSpeedM1 = Request<Command::READ_M1_ENC_SPD, Command::NONE, int32_t, uint8_t>;
-
-// Read M2 Speed in Encoder Counts Per Second
-using ReadSpeedM2 = Request<Command::READ_M2_ENC_SPD, Command::NONE, int32_t, uint8_t>;
+// Drive M1 and M2 with signed duty cycle (encoders not required)
+// Duty range is typically -32767 to 32767.
+using DriveM1M2WithSignedDuty =
+  Request<Command::NONE, Command::DRIVE_M1_M2_SGN_DUTY_CYCLE, int16_t, int16_t>;
 
 // Add additional commands here. See BasicMicro user manual for examples
 // https://downloads.basicmicro.com/docs/roboclaw_user_manual.pdf

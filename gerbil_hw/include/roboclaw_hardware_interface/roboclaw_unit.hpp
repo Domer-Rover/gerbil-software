@@ -34,12 +34,10 @@ public:
     MotorJoint::SharedPtr m2);
 
   // Read the encoder counts from the roboclaw and update position state
-  // Returns: true on success, false on serial communication error (CRC mismatch, timeout, etc.)
-  bool read();
+  void read();
 
-  // Convert the velocity command to tick rate request and write to the roboclaw
-  // Returns: true on success, false on serial communication error (no ACK, timeout, etc.)
-  bool write();
+  // Conver the velocity command to tick rate request and write to the roboclaw
+  void write();
 
 private:
   roboclaw_serial::Interface::SharedPtr interface_;
@@ -48,8 +46,6 @@ private:
   // RoboClaw serial driver messages
   roboclaw_serial::DriveM1M2WithSignedSpeed tick_rate_command_;
   roboclaw_serial::EncoderCounters encoder_state_;
-  roboclaw_serial::ReadSpeedM1 encoder_speed_m1_;
-  roboclaw_serial::ReadSpeedM2 encoder_speed_m2_;
 };
 }  // namespace roboclaw_hardware_interface
 

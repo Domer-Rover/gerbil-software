@@ -1,0 +1,43 @@
+# Headless image for Jetson (real robot hardware)
+FROM ros:humble-ros-base
+
+USER root
+
+# Install ROS2 packages and dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    python3-pip \
+    wget \
+    zstd \
+    i2c-tools \
+    libi2c-dev \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
+    ros-humble-controller-manager \
+    ros-humble-hardware-interface \
+    ros-humble-diff-drive-controller \
+    ros-humble-joint-state-broadcaster \
+    ros-humble-xacro \
+    ros-humble-robot-state-publisher \
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
+    ros-humble-teleop-twist-keyboard \
+    libserial-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ZED SDK for Jetson
+RUN wget -q --no-check-certificate -O ZED_SDK_Linux.run \
+    https://download.stereolabs.com/zedsdk/4.0/l4t35.4/jetsons && \
+    chmod +x ZED_SDK_Linux.run && \
+    ./ZED_SDK_Linux.run -- silent skip_tools && \
+    rm ZED_SDK_Linux.run
+
+# Install Python packages
+RUN pip3 install --no-cache-dir numpy basicmicro pyserial smbus2
+
+# Create workspace
+RUN mkdir -p /home/ubuntu/ros2_ws/src
+WORKDIR /home/ubuntu/ros2_ws
+
+# Source ROS2 setup
+RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc

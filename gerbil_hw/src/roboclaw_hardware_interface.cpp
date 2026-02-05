@@ -12,16 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
-#include <roboclaw_serial/device.hpp>
 
-// TODO: Verify teleop_twist_keyboard scaling for your robot!
-//       - Check diff_drive_controller params: wheel_radius and wheel_separation must be accurate
-//       - teleop_twist_keyboard sends Twist messages (linear.x in m/s, angular.z in rad/s)
-//       - The controller converts these to wheel velocities using your robot's geometry
-//       - If wheels spin too fast/slow, check these parameters in your controller config YAML
-//       - Also verify the speed scaling in teleop_twist_keyboard launch (default may be too high)
+#include <iostream>
+#include <roboclaw_serial/device.hpp>
 
 namespace roboclaw_hardware_interface
 {
@@ -72,7 +66,6 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
-        state_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityStatePtr());
       }
     }
   }
@@ -123,12 +116,11 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
               ". Only velocity command interfaces are supported.");
     }
 
-    for (const auto & interface : joint.state_interfaces) {
-      if (interface.name != "position" && interface.name != "velocity") {
-        throw std::runtime_error(
-              "Invalid state interface '" + interface.name + "' for " + joint.name +
-              ". Only 'position' and 'velocity' state interfaces are supported.");
-      }
+    // We currently only support position state interfaces
+    if (joint.state_interfaces.size() != 1 || joint.state_interfaces[0].name != "position") {
+      throw std::runtime_error(
+              "Invalid state interface for " + joint.name +
+              ". Only position state interfaces are supported.");
     }
 
     // Capture and validate parameters
@@ -148,11 +140,6 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     }
 
     // Get the tick count per wheel rotation value
-    // TODO: Verify qppr (Quadrature Pulses Per Revolution) matches your actual encoder!
-    //       - Check your encoder datasheet for CPR (Counts Per Revolution)
-    //       - For quadrature encoders: qppr = CPR * 4 (due to quadrature decoding)
-    //       - Wrong qppr causes incorrect velocity scaling and erratic motor behavior
-    //       - Common values: 360, 1440, 2048, 4096 for various encoders
     int qppr;
     try {
       qppr = stoi(joint.parameters.at("qppr"));

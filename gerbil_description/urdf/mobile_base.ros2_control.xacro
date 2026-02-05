@@ -1,31 +1,43 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <ros2_control name="GerbilRoboClawSystem" type="system">
-        <!-- this is mock hardware for simulation or testing without actual roboclaw hardware -->
-        <hardware>
-            <plugin>mock_components/GenericSystem</plugin>
-        </hardware>
 
-        <!-- this is the actual roboclaw hardware, comment this out if your not sshed into jetson -->
-        <!-- <hardware>
-            <plugin>gerbil_hw/RoboClawHardwareInterface</plugin>
-            <param name="serial_port">/dev/roboclaw</param>
-        </hardware> -->
+    <!-- Hardware mode: 'mock' for simulation, 'real' for actual RoboClaw -->
+    <xacro:arg name="use_mock_hardware" default="true" />
+
+    <ros2_control name="GerbilRoboClawSystem" type="system">
+        <!-- Mock hardware for simulation or testing without actual RoboClaw -->
+        <xacro:if value="$(arg use_mock_hardware)">
+            <hardware>
+                <plugin>mock_components/GenericSystem</plugin>
+            </hardware>
+        </xacro:if>
+
+        <!-- Real RoboClaw hardware (use when SSH'd into Jetson) -->
+        <xacro:unless value="$(arg use_mock_hardware)">
+            <hardware>
+                <plugin>gerbil_hw/RoboClawHardwareInterface</plugin>
+                <param name="serial_port">/dev/ttyTHS1</param>
+            </hardware>
+        </xacro:unless>
 
         <!-- joints that are defined and do not change whether using mock hardware or actual roboclaw hardware -->
         <joint name="base_left_wheel_joint">
-            <command_interface name="velocity"/>
+            <command_interface name="velocity">
+                <param name="min">-10.0</param>
+                <param name="max">10.0</param>
+            </command_interface>
             <state_interface name="position"/>
-            <state_interface name="velocity"/>
             <!-- TODO Verify these parameters -->
             <param name="address">128</param>
             <param name="qppr">500</param>
             <param name="motor_type">M2</param>
         </joint>
         <joint name="base_right_wheel_joint">
-            <command_interface name="velocity"/>
+            <command_interface name="velocity">
+                <param name="min">-10.0</param>
+                <param name="max">10.0</param>
+            </command_interface>
             <state_interface name="position"/>
-            <state_interface name="velocity"/>
             <!-- TODO Verify these parameters -->
             <param name="address">128</param>
             <param name="qppr">500</param>

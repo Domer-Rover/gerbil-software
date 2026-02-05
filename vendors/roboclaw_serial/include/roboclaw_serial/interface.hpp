@@ -117,8 +117,12 @@ public:
     // Write the request
     device_->write(buffer_.data(), buffer_.size());
 
-    if (!this->readAck()) {
-      throw std::logic_error("did not get an ack!");
+    try {
+      if (!this->readAck()) {
+        throw std::logic_error("did not get an ack!");
+      }
+    } catch (const std::exception &) {
+      return;
     }
   }
 

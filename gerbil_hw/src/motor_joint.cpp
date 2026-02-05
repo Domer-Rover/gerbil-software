@@ -14,9 +14,6 @@
 
 #include "roboclaw_hardware_interface/motor_joint.hpp"
 
-#include <cmath>
-#include <limits>
-
 namespace roboclaw_hardware_interface
 {
 
@@ -27,25 +24,12 @@ MotorJoint::MotorJoint(const std::string joint_name, const int32_t qppr)
 
 int32_t MotorJoint::getTickRateCommand() const
 {
-  // Guard against NaN or infinity which would cause undefined behavior on cast
-  if (!std::isfinite(velocity_command_)) {
-    return 0;
-  }
-  
-  double tick_rate = velocity_command_ * ticks_per_radian_;
-  
-  // Clamp to int32_t range to prevent overflow
-  constexpr double max_tick_rate = static_cast<double>(std::numeric_limits<int32_t>::max());
-  constexpr double min_tick_rate = static_cast<double>(std::numeric_limits<int32_t>::min());
-  
-  if (tick_rate > max_tick_rate) {
-    return std::numeric_limits<int32_t>::max();
-  }
-  if (tick_rate < min_tick_rate) {
-    return std::numeric_limits<int32_t>::min();
-  }
-  
-  return static_cast<int32_t>(tick_rate);
+  return static_cast<int32_t>(velocity_command_ * ticks_per_radian_);
+}
+
+double MotorJoint::getVelocityCommand() const
+{
+  return velocity_command_;
 }
 
 // Set the position given the current wheel encoder count
@@ -60,11 +44,5 @@ void MotorJoint::setPositionState(const int32_t & encoder_count)
   }
   // Store the prior encoder count for next time
   prior_encoder_count_ = encoder_count;
-}
-
-void MotorJoint::setVelocityState(const int32_t & encoder_speed)
-{
-  // Convert EncCounts/Sec directly to Radians/Sec
-    velocity_state_ = static_cast<double>(encoder_speed) / ticks_per_radian_;
 }
 }  // namespace roboclaw_hardware_interface

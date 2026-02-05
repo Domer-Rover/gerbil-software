@@ -112,6 +112,11 @@ private:
     options.c_iflag = IGNPAR;
     options.c_oflag = 0;
     options.c_lflag = 0;
+
+    // CRITICAL FIX: Set baud rate to 38400
+    cfsetispeed(&options, B38400);
+    cfsetospeed(&options, B38400);
+
     tcflush(fd_, TCIFLUSH);
     tcsetattr(fd_, TCSANOW, &options);
 

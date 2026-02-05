@@ -22,7 +22,6 @@
 #include <roboclaw_serial/interface.hpp>
 
 #include "hardware_interface/system_interface.hpp"
-
 #include "roboclaw_hardware_interface/motor_joint.hpp"
 #include "roboclaw_hardware_interface/roboclaw_unit.hpp"
 
