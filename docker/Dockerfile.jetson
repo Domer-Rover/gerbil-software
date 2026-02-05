@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     wget \
     udev \
+    zstd \
     # ROS2 control
     ros-humble-ros2-control \
     ros-humble-ros2-controllers \
