@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <iostream>
+#include <rclcpp/rclcpp.hpp>
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
 #include <roboclaw_serial/device.hpp>
 
