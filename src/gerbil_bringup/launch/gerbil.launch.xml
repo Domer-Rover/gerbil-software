@@ -39,6 +39,9 @@
     <group if="$(var launch_zed)">
         <include file="$(find-pkg-share zed_wrapper)/launch/zed_camera.launch.py">
             <arg name="camera_model" value="zed2i" />
+            <arg name="publish_urdf" value="true" />
+            <arg name="publish_tf" value="true" />
+            <arg name="publish_map_tf" value="false" />
         </include>
     </group>
 

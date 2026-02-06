@@ -15,18 +15,6 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    launch_imu_arg = DeclareLaunchArgument(
-        'launch_imu',
-        default_value='true',
-        description='Launch IMU node'
-    )
-
-    launch_zed_arg = DeclareLaunchArgument(
-        'launch_zed',
-        default_value='true',
-        description='Launch ZED2i camera'
-    )
-
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -35,6 +23,7 @@ def generate_launch_description():
 
     gerbil_bringup_share = FindPackageShare('gerbil_bringup')
 
+    # Base robot launch (controllers, ZED, robot_state_publisher)
     gerbil_launch = IncludeLaunchDescription(
         AnyLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -46,11 +35,12 @@ def generate_launch_description():
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
-            'launch_imu': LaunchConfiguration('launch_imu'),
-            'launch_zed': LaunchConfiguration('launch_zed'),
+            'launch_imu': 'false',
+            'launch_zed': 'true',
         }.items()
     )
 
+    # Foxglove bridge for remote visualization
     foxglove_bridge = Node(
         package='foxglove_bridge',
         executable='foxglove_bridge',
@@ -65,11 +55,46 @@ def generate_launch_description():
         output='screen'
     )
 
+    # Convert ZED depth image to 2D laser scan for SLAM Toolbox
+    depthimage_to_laserscan = Node(
+        package='depthimage_to_laserscan',
+        executable='depthimage_to_laserscan_node',
+        name='depthimage_to_laserscan_node',
+        parameters=[
+            PathJoinSubstitution([
+                gerbil_bringup_share,
+                'config',
+                'depthimage_to_laserscan.yaml'
+            ])
+        ],
+        remappings=[
+            ('depth', '/zed/zed_node/depth/depth_registered'),
+            ('depth_camera_info', '/zed/zed_node/depth/camera_info'),
+            ('scan', '/scan'),
+        ],
+        output='screen'
+    )
+
+    # SLAM Toolbox for mapping and localization
+    slam_toolbox = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        parameters=[
+            PathJoinSubstitution([
+                gerbil_bringup_share,
+                'config',
+                'slam_toolbox.yaml'
+            ])
+        ],
+        output='screen'
+    )
+
     return LaunchDescription([
         use_mock_hardware_arg,
-        launch_imu_arg,
-        launch_zed_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,
+        depthimage_to_laserscan,
+        slam_toolbox,
     ])

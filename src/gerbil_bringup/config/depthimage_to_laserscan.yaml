@@ -1,0 +1,14 @@
+depthimage_to_laserscan_node:
+  ros__parameters:
+    # Height of the scan line in the depth image (pixels from center)
+    scan_height: 10
+
+    # Range limits (match ZED2i depth config)
+    range_min: 0.3
+    range_max: 10.0
+
+    # Output frame - uses the ZED's left camera optical frame
+    output_frame: "zed_camera_link"
+
+    # Scan time (1/fps)
+    scan_time: 0.033
