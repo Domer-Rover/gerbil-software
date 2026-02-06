@@ -1,5 +1,4 @@
 services:
-  # Development container with VNC (Mac/Windows/Jetson)
   ros-dev:
     build:
       context: .
@@ -11,14 +10,9 @@ services:
     security_opt:
       - seccomp:unconfined
     volumes:
-      - .:/home/ubuntu/ros2_ws/src/gerbil-software
-    devices:
-      - /dev/ttyTHS1:/dev/ttyTHS1  # RoboClaw (only exists on Jetson, ignored on Mac)
-      # - /dev/video0:/dev/video0    # ZED2i (only exists on Jetson, ignored on Mac)
-      - /dev/i2c-1:/dev/i2c-1      # IMU (only exists on Jetson, ignored on Mac)
+      - ./src:/home/ubuntu/ros2_ws/src
     command: /bin/bash -c "supervisord -c /etc/supervisor/supervisord.conf"
 
-  # Headless container (Jetson only)
   ros-jetson:
     build:
       context: .
@@ -28,7 +22,7 @@ services:
     privileged: true
     shm_size: '512m'
     volumes:
-      - .:/home/ubuntu/ros2_ws/src/gerbil-software
+      - ./src:/home/ubuntu/ros2_ws/src
     devices:
       - /dev/ttyTHS1:/dev/ttyTHS1
       - /dev/video0:/dev/video0

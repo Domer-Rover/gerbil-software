@@ -1,15 +1,15 @@
-# Development image with VNC for Mac/Windows/Jetson
 FROM tiryoh/ros2-desktop-vnc:humble
 
 USER root
 
-# Install ROS2 packages and dependencies
 RUN apt-get update && apt-get install -y \
     nano \
     git \
     python3-pip \
     wget \
     zstd \
+    i2c-tools \
+    libi2c-dev \
     ros-humble-ros2-control \
     ros-humble-ros2-controllers \
     ros-humble-controller-manager \
@@ -28,7 +28,6 @@ RUN apt-get update && apt-get install -y \
     libserial-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Gazebo on amd64 (Intel/AMD), skip on arm64 (Apple Silicon)
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] || [ "$(uname -m)" = "x86_64" ]; then \
     apt-get update && \
@@ -38,9 +37,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] || [ "$(uname -m)" = "x86_64" ]; th
     rm -rf /var/lib/apt/lists/*; \
     fi
 
-# Install ZED SDK on amd64 only (skip on Apple Silicon)
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] || [ "$(uname -m)" = "x86_64" ]; then \
-    echo "Installing ZED SDK for amd64..." && \
     wget -q --no-check-certificate -O ZED_SDK_Linux.run \
     https://download.stereolabs.com/zedsdk/4.0/cu118/ubuntu22 && \
     chmod +x ZED_SDK_Linux.run && \
@@ -48,10 +45,14 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] || [ "$(uname -m)" = "x86_64" ]; th
     rm ZED_SDK_Linux.run; \
     fi
 
-# Set TurtleBot3 model for Nav2 tutorials
 ENV TURTLEBOT3_MODEL=waffle
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc && \
     echo "export TURTLEBOT3_MODEL=waffle" >> /etc/bash.bashrc
 
-# Install Python packages
-RUN pip3 install --no-cache-dir numpy pandas basicmicro pyserial
+RUN pip3 install --no-cache-dir \
+    numpy \
+    pandas \
+    basicmicro \
+    pyserial \
+    adafruit-circuitpython-bno055 \
+    adafruit-extended-bus

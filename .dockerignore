@@ -1,0 +1,28 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Documentation
+*.md
+!src/*/README.md
+
+# Scripts (not needed in container)
+scripts/
+
+# macOS
+.DS_Store

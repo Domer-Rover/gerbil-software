@@ -1,39 +1,29 @@
 # Docker Images
 
-This directory contains Dockerfiles for different deployment scenarios:
-
 ## Dockerfile.dev
-**For:** Mac/Windows development with GUI
-**Features:**
-- Full Ubuntu desktop via noVNC (access at http://localhost:6080)
-- RViz for visualization
-- Gazebo simulator (on Intel/AMD only)
+Development environment with GUI support.
+
+Features:
+- Ubuntu desktop via noVNC (http://localhost:6080)
+- RViz, Gazebo (Intel/AMD only)
 - ZED2i camera support
-- TurtleBot3 packages for Nav2 tutorials
+- Navigation2 packages
 
-**Usage:**
+Usage:
 ```bash
-# Build and run
 docker-compose up ros-dev
-
-# Access via browser
-open http://localhost:6080
 ```
 
 ## Dockerfile.jetson
-**For:** Jetson Nano/Orin embedded deployment
-**Features:**
-- Headless (no GUI) for performance
-- Optimized for ARM64
-- ZED2i camera with Jetson-specific SDK
+Headless environment for Jetson hardware.
+
+Features:
+- ARM64 optimized
+- ZED2i with Jetson SDK
 - Hardware access (UART, I2C, USB)
-- Smaller image size
 
-**Usage:**
+Usage:
 ```bash
-# On Jetson, build and run
 docker-compose up ros-jetson
-
-# Enter container
 docker exec -it gerbil-jetson bash
 ```
