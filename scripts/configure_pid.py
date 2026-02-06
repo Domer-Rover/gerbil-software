@@ -29,11 +29,11 @@ ADDRESS = 0x80
 # - At 200 RPM: ~1666 encoder counts/sec
 # Using 44000 as a safe maximum for typical motors
 
-# AGGRESSIVE PID values for fast response
-# Higher P = more aggressive response, reaches target speed quickly
-# Higher I = stronger correction of steady-state error
-P_VALUE = 1.0
-I_VALUE = 0.5
+# GENTLE PID values for smooth, controlled operation
+# Lower P = less aggressive response, smoother acceleration
+# Lower I = gentler steady-state correction
+P_VALUE = 0.2
+I_VALUE = 0.1
 D_VALUE = 0.0
 QPPS_VALUE = 44000
 
