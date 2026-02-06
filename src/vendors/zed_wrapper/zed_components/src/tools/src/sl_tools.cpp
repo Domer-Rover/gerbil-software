@@ -1,4 +1,4 @@
-// Copyright 2025 Stereolabs
+// Copyright 2024 Stereolabs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -94,22 +94,10 @@ std::vector<float> convertRodrigues(sl::float3 r)
   return R;
 }
 
-std::string getFullFilePath(const std::string & file_name)
+bool file_exist(const std::string & name)
 {
-  std::string new_filename;
-  if (file_name.front() == '~') {
-    std::string home_path = std::getenv("HOME");
-    if (!home_path.empty()) {
-      new_filename = home_path;
-      new_filename += file_name.substr(1, file_name.size() - 1);
-    }
-  } else {
-    new_filename = file_name;
-  }
-
-  std::filesystem::path path(new_filename);
-  auto abs_path = std::filesystem::absolute(path);
-  return abs_path.string();
+  struct stat buffer;
+  return stat(name.c_str(), &buffer) == 0;
 }
 
 std::string getSDKVersion(int & major, int & minor, int & sub_minor)
@@ -150,11 +138,11 @@ rclcpp::Time slTime2Ros(sl::Timestamp t, rcl_clock_type_t clock_type)
 }
 
 std::unique_ptr<sensor_msgs::msg::Image> imageToROSmsg(
-  const sl::Mat & img, const std::string & frameId, const rclcpp::Time & t, bool use_pub_timestamp)
+  const sl::Mat & img, const std::string & frameId, const rclcpp::Time & t)
 {
   std::unique_ptr<sensor_msgs::msg::Image> imgMessage = std::make_unique<sensor_msgs::msg::Image>();
 
-  imgMessage->header.stamp = use_pub_timestamp ? rclcpp::Clock().now() : t;
+  imgMessage->header.stamp = t;
   imgMessage->header.frame_id = frameId;
   imgMessage->height = img.getHeight();
   imgMessage->width = img.getWidth();
@@ -225,7 +213,7 @@ std::unique_ptr<sensor_msgs::msg::Image> imageToROSmsg(
 
 std::unique_ptr<sensor_msgs::msg::Image> imagesToROSmsg(
   const sl::Mat & left, const sl::Mat & right, const std::string & frameId,
-  const rclcpp::Time & t, bool use_pub_timestamp)
+  const rclcpp::Time & t)
 {
   std::unique_ptr<sensor_msgs::msg::Image> imgMsgPtr = std::make_unique<sensor_msgs::msg::Image>();
 
@@ -236,7 +224,7 @@ std::unique_ptr<sensor_msgs::msg::Image> imagesToROSmsg(
     return imgMsgPtr;
   }
 
-  imgMsgPtr->header.stamp = use_pub_timestamp ? rclcpp::Clock().now() : t;
+  imgMsgPtr->header.stamp = t;
   imgMsgPtr->header.frame_id = frameId;
   imgMsgPtr->height = left.getHeight();
   imgMsgPtr->width = 2 * left.getWidth();
@@ -431,54 +419,7 @@ bool generateROI(const std::vector<sl::float2> & poly, sl::Mat & out_roi)
   return true;
 }
 
-std::vector<int> parseStringVector_int(
-  const std::string & input,
-  std::string & error_return)
-{
-  std::vector<int> result;
-
-  if (input == "[]") {
-    error_return = "";
-    return result;
-  }
-
-  if (input.empty() || input.front() != '[' || input.back() != ']') {
-    error_return = "Vector string must start with [ and end with ]";
-    return result;
-  }
-
-  std::string trimmed = input;
-  trimmed.erase(
-    std::remove(trimmed.begin(), trimmed.end(), '['),
-    trimmed.end());
-  trimmed.erase(
-    std::remove(trimmed.begin(), trimmed.end(), ']'),
-    trimmed.end());
-
-  std::stringstream ss(trimmed);
-  std::string token;
-  while (std::getline(ss, token, ',')) {
-    // Trim leading and trailing whitespace
-    token.erase(0, token.find_first_not_of(" \t\n\r"));
-    token.erase(token.find_last_not_of(" \t\n\r") + 1);
-
-    if (token.empty()) {
-      continue;
-    }
-
-    try {
-      int value = std::stoi(token);
-      result.push_back(value);
-    } catch (const std::exception & e) {
-      error_return = "Failed to parse integer: " + token;
-      return result;
-    }
-  }
-  error_return = "";
-  return result;
-}
-
-std::vector<std::vector<float>> parseStringMultiVector_float(
+std::vector<std::vector<float>> parseStringVector(
   const std::string & input, std::string & error_return)
 {
   std::vector<std::vector<float>> result;

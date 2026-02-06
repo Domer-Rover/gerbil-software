@@ -15,7 +15,7 @@ if(DEFINED ENV{ROS_DISTRO})
     #message("* Found ROS2 ${FOUND_ROS2_DISTRO}")
 else()
     message("* ROS2 distro variable not set. Trying to figure it out...")
-    set(ROS2_DISTROS "ardent;bouncy;crystal;dashing;eloquent;foxy;galactic;humble;iron;jazzy;kilted;rolling")
+    set(ROS2_DISTROS "ardent;crystal;dashing;eloquent;foxy;galactic;humble;jazzy;rolling")
     set(ROS2_FOUND FALSE)
     foreach(distro ${ROS2_DISTROS})
         if(NOT ROS2_FOUND)
@@ -33,17 +33,17 @@ if(ROS2_FOUND)
     if(${FOUND_ROS2_DISTRO} STREQUAL "foxy")
         #message("* ROS2 ${FOUND_ROS2_DISTRO} is officially supported by this package.")
         add_definitions(-DFOUND_FOXY)
+    elseif(${FOUND_ROS2_DISTRO} STREQUAL "iron")
+        #message("* ROS2 ${FOUND_ROS2_DISTRO} is officially supported by this package.")
+	add_definitions(-DFOUND_IRON)
     elseif(${FOUND_ROS2_DISTRO} STREQUAL "humble")
         #message("* ROS2 ${FOUND_ROS2_DISTRO} is officially supported by this package.")
         add_definitions(-DFOUND_HUMBLE)
-    elseif(${FOUND_ROS2_DISTRO} STREQUAL "iron")
-        #message("* ROS2 ${FOUND_ROS2_DISTRO} is officially supported by this package.")
-	    add_definitions(-DFOUND_IRON)    
     elseif(${FOUND_ROS2_DISTRO} STREQUAL "jazzy")
         #message("* ROS2 ${FOUND_ROS2_DISTRO} is officially supported by this package.")
         add_definitions(-DFOUND_JAZZY)
     else()
-        message("*** WARNING *** Unsupported ROS2 ${FOUND_ROS2_DISTRO}. '${PROJECT_NAME}' may not work correctly.")
+        message("*** WARNING *** ROS2 ${FOUND_ROS2_DISTRO} is not officially supported by the package '${PROJECT_NAME}'. Correct operation is not guaranteed.")
     endif()
 else()
     message("*** WARNING *** ROS2 distro is unknown. This package could not work correctly.")
@@ -96,11 +96,10 @@ set(DEPENDENCIES
     image_transport
     builtin_interfaces
     std_msgs
-    rosgraph_msgs
     tf2
     tf2_ros
     tf2_geometry_msgs
-    geometry_msgs
+    geometry_msgs    
     nav_msgs
     nmea_msgs
     geographic_msgs
@@ -108,12 +107,12 @@ set(DEPENDENCIES
     stereo_msgs
     zed_msgs
     std_srvs
+    cob_srvs
     diagnostic_msgs
     diagnostic_updater
     visualization_msgs
     shape_msgs
     robot_localization
-    backward_ros
 )
 
 find_package(ament_cmake_auto REQUIRED)
@@ -125,7 +124,6 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(rosgraph_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -135,51 +133,19 @@ find_package(nmea_msgs REQUIRED)
 find_package(geographic_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(stereo_msgs REQUIRED)
+
 find_package(image_transport REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(cob_srvs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(shape_msgs REQUIRED)
 find_package(robot_localization REQUIRED)
 
-# Debug
-find_package(backward_ros REQUIRED)
-
-# Check ISAAC ROS Nitros availability
-find_package(isaac_ros_common QUIET)
-if(isaac_ros_common_FOUND)
-  find_package(isaac_ros_nitros)
-  if(isaac_ros_nitros_FOUND)
-      find_package(isaac_ros_managed_nitros QUIET)
-      if(isaac_ros_managed_nitros_FOUND)
-          find_package(isaac_ros_nitros_image_type QUIET)
-          if(isaac_ros_nitros_image_type_FOUND)
-            list(APPEND DEPENDENCIES isaac_ros_common)
-            list(APPEND DEPENDENCIES isaac_ros_nitros)
-            list(APPEND DEPENDENCIES isaac_ros_managed_nitros)
-            list(APPEND DEPENDENCIES isaac_ros_nitros_image_type)
-            add_definitions(-DFOUND_ISAAC_ROS_NITROS)
-            message(" * ISAAC ROS Nitros transport is available")
-          else()
-            message(WARNING " * 'isaac_ros_nitros_image_type' not found, ISAAC ROS NITROS transport will not be available.")
-          endif()
-      else()
-        message(WARNING " * 'isaac_ros_managed_nitros' not found, ISAAC ROS NITROS transport will not be available.")
-      endif()
-  else()
-    message(WARNING " * 'isaac_ros_nitros' not found, ISAAC ROS NITROS transport will not be available.")
-  endif()
-#else()
-#  message(" * 'isaac_ros_common' not found, ISAAC ROS NITROS transport will not be available.")
-endif()
-
-# Check Point Cloud Transport availability
-find_package(point_cloud_transport QUIET)
-if(point_cloud_transport_FOUND)
+if(NOT ${FOUND_ROS2_DISTRO} STREQUAL "foxy")
+  find_package(point_cloud_transport REQUIRED)
   list(APPEND DEPENDENCIES point_cloud_transport)
-  message(" * Point Cloud Transport is available")
-  add_definitions(-DFOUND_POINT_CLOUD_TRANSPORT)
 endif()
 
 if(BUILD_TESTING)
@@ -190,7 +156,7 @@ endif()
 ###############################################################################
 #Add all files in subdirectories of the project in
 # a dummy_target so qtcreator have access to all files
-file(GLOB_RECURSE all_files ${CMAKE_CURRENT_SOURCE_DIR}/*)
+file(GLOB_RECURSE all_files ${CMAKE_SOURCE_DIR}/*)
 add_custom_target(all_${PROJECT_NAME}_files SOURCES ${all_files})
 
 ###############################################################################
@@ -216,39 +182,32 @@ set(SL_TOOLS_INC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include/sl_logging.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include/json.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include/gnss_replay.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include/sl_types.hpp
 )
 
 set(SL_TOOLS_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/src/sl_tools.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/src/sl_win_avg.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/src/gnss_replay.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/src/sl_types.cpp
 )
 
 set(ZED_CAMERA_INC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/visibility_control.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/sl_version.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/zed_camera_component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/sl_types.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/zed_camera_component.hpp    
 )
 
 set(ZED_CAMERA_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_component_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_component_video_depth.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_component_objdet.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_component_bodytrk.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_component.cpp
 )
 
 set(ZED_CAMERA_ONE_INC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/visibility_control.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/sl_version.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/include/zed_camera_one_component.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/sl_types.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/zed_camera_one_component.hpp
 )
 
 set(ZED_CAMERA_ONE_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/src/zed_camera_one_component_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/src/zed_camera_one_component_sensors.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/src/zed_camera_one_component_video.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/src/zed_camera_one_component.cpp
 )
 ###############################################################################
 # Bin and Install
@@ -291,7 +250,7 @@ target_include_directories(zed_camera_one_component PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${ZED_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include
 )
 target_compile_definitions(zed_camera_one_component
@@ -317,7 +276,6 @@ install(TARGETS zed_camera_component zed_camera_one_component
 # Install header files
 install(DIRECTORY
     ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera/include/
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/zed_camera_one/include/
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools/include/
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/
     DESTINATION include/${PROJECT_NAME}/

@@ -1,4 +1,4 @@
-// Copyright 2025 Stereolabs
+// Copyright 2024 Stereolabs
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,14 +25,6 @@
   if (_debugCommon) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
 #define DEBUG_STREAM_COMM_ONCE(stream_arg) \
   if (_debugCommon) RCLCPP_DEBUG_STREAM_ONCE(get_logger(), stream_arg)
-
-// Grab (low level)
-#define DEBUG_GRAB(...) \
-  if (_debugGrab) RCLCPP_DEBUG(get_logger(), __VA_ARGS__)
-#define DEBUG_STREAM_GRAB(stream_arg) \
-  if (_debugGrab) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
-#define DEBUG_STREAM_GRAB_ONCE(stream_arg) \
-  if (_debugGrab) RCLCPP_DEBUG_STREAM_ONCE(get_logger(), stream_arg)
 
 // Simulation
 #define DEBUG_SIM(...) \
@@ -77,25 +69,8 @@
   if (_debugCamCtrl) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
 
 // Point Cloud
-#define DEBUG_PC(...) \
-  if (_debugPointCloud) RCLCPP_DEBUG(get_logger(), __VA_ARGS__)
 #define DEBUG_STREAM_PC(stream_arg) \
   if (_debugPointCloud) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
-
-// TF
-#define DEBUG_TF(...) \
-  if (_debugTf) RCLCPP_DEBUG(get_logger(), __VA_ARGS__)
-#define DEBUG_ONCE_TF(...) \
-  if (_debugTf) RCLCPP_DEBUG_ONCE(get_logger(), __VA_ARGS__)
-#define DEBUG_STREAM_TF(stream_arg) \
-  if (_debugTf) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
-#define DEBUG_STREAM_THROTTLE_TF(duration, stream_arg) \
-  if (_debugTf) { \
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME); \
-    RCLCPP_DEBUG_STREAM_THROTTLE( \
-      get_logger(), steady_clock, duration, \
-      stream_arg); \
-  }
 
 // Positional Tracking
 #define DEBUG_PT(...) \
@@ -177,21 +152,6 @@
   if (_debugStreaming) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
 #define DEBUG_STREAM_THROTTLE_STR(duration, stream_arg) \
   if (_debugStreaming) { \
-    rclcpp::Clock steady_clock(RCL_STEADY_TIME); \
-    RCLCPP_DEBUG_STREAM_THROTTLE( \
-      get_logger(), steady_clock, duration, \
-      stream_arg); \
-  }
-
-// Nitros
-#define DEBUG_NITROS(...) \
-  if (_debugNitros) RCLCPP_DEBUG(get_logger(), __VA_ARGS__)
-#define DEBUG_ONCE_NITROS(...) \
-  if (_debugNitros) RCLCPP_DEBUG_ONCE(get_logger(), __VA_ARGS__)
-#define DEBUG_STREAM_NITROS(stream_arg) \
-  if (_debugNitros) RCLCPP_DEBUG_STREAM(get_logger(), stream_arg)
-#define DEBUG_STREAM_THROTTLE_NITROS(duration, stream_arg) \
-  if (_debugNitros) { \
     rclcpp::Clock steady_clock(RCL_STEADY_TIME); \
     RCLCPP_DEBUG_STREAM_THROTTLE( \
       get_logger(), steady_clock, duration, \
