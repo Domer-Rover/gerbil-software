@@ -194,12 +194,10 @@ ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=false launch_imu
 
 ```bash
 # Standard teleop
-ros2 run teleop_twist_keyboard teleop_twist_keyboard \
-  --ros-args -r cmd_vel:=/diff_drive_controller/cmd_vel_unstamped
 
-# Alternative: Launch with remapping in separate terminal
-ros2 run teleop_twist_keyboard teleop_twist_keyboard \
-  --ros-args --remap cmd_vel:=/diff_drive_controller/cmd_vel_unstamped
+# This will be SLOW but controllable
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/diff_cont/cmd_vel_unstamped -p speed:=0.02 -p turn:=0.2
+
 ```
 
 ---
