@@ -2,7 +2,6 @@
     <!-- ==================== ARGUMENTS ==================== -->
     <arg name="use_mock_hardware" default="true" />
     <arg name="launch_rviz" default="true" />
-    <arg name="launch_imu" default="true" />
     <arg name="launch_zed" default="true" />
 
     <!-- ==================== PATHS ==================== -->
@@ -27,13 +26,6 @@
     <!-- Spawners for controllers -->
     <node pkg="controller_manager" exec="spawner" args="joint_state_broadcaster" />
     <node pkg="controller_manager" exec="spawner" args="diff_drive_controller" />
-
-    <!-- ==================== IMU (BNO055) ==================== -->
-    <group if="$(var launch_imu)">
-        <node pkg="imu_package" exec="bno055_imu" output="screen">
-            <param from="$(find-pkg-share imu_package)/config/bno055_params.yaml" />
-        </node>
-    </group>
 
     <!-- ==================== ZED2i CAMERA ==================== -->
     <group if="$(var launch_zed)">

@@ -15,12 +15,6 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    launch_imu_arg = DeclareLaunchArgument(
-        'launch_imu',
-        default_value='true',
-        description='Launch IMU node'
-    )
-
     launch_zed_arg = DeclareLaunchArgument(
         'launch_zed',
         default_value='true',
@@ -46,7 +40,6 @@ def generate_launch_description():
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
-            'launch_imu': LaunchConfiguration('launch_imu'),
             'launch_zed': LaunchConfiguration('launch_zed'),
         }.items()
     )
@@ -60,16 +53,29 @@ def generate_launch_description():
             'address': '0.0.0.0',
             'num_threads': 4,
             'max_qos_depth': 10,
-            'send_buffer_limit': 10000000,
+            'send_buffer_limit': 41943040,
         }],
         output='screen'
     )
 
+    # ArUco marker detection (OpenCV, DICT_6X6_250)
+    aruco_detector = Node(
+        package='gerbil_bringup',
+        executable='aruco_detector.py',
+        name='aruco_detector',
+        output='screen',
+        parameters=[{
+            'marker_size': 0.15,
+            'dictionary_id': 10,
+            'camera_frame': 'zed_left_camera_optical_frame',
+        }],
+    )
+
     return LaunchDescription([
         use_mock_hardware_arg,
-        launch_imu_arg,
         launch_zed_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,
+        aruco_detector,
     ])
