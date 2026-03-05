@@ -7,11 +7,11 @@ Welcome to the software repo for the Gerbil navigation robot! This document will
 
 - **.github**
   _CI pipeline and PR/issue templates_
-- **gerbil_bringup**
+- **.gerbil_bringup**
   _Launch files and configuration_
 - **.gerbil_description**
   _Hardware Description for ros2\_control_
-- **gerbil_driving**
+- **.gerbil_driving**
   _Driving package for robot\_localization_
 - **.gerbil_hw**
   _Hardware Interface for ros2\_control_
