@@ -1,6 +1,6 @@
 # Jetson Setup
 
-Host: `jetsonson.dhcp.nd.edu`. Admin (only sudo): `jetsonson`. Only one person can use the rover hardware at a time.
+Gerbil runs on its own Jetson, separate from Capybara's. Only one person can use the robot hardware at a time.
 
 ## Add a developer (admin)
 
@@ -19,8 +19,8 @@ Developers have no sudo. System packages: ask the admin (`sudo apt install`). Pe
 
 ```bash
 ssh-keygen -t ed25519                              # skip if you already have a key
-ssh-copy-id <username>@jetsonson.dhcp.nd.edu       # once; last time you type the password
-ssh <username>@jetsonson.dhcp.nd.edu
+ssh-copy-id <username>@<gerbil-jetson>       # once; last time you type the password
+ssh <username>@<gerbil-jetson>
 ssh -T git@github.com                              # confirms GitHub key works
 ```
 

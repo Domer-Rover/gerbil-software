@@ -3,7 +3,7 @@
 ## Build
 
 ```bash
-cd ~/domerrover/gerbil-software
+cd ~/gerbil-software
 colcon build --symlink-install
 source install/setup.bash
 ```
