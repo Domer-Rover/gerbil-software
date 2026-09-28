@@ -1,11 +1,13 @@
 # Stable names for Gerbil's serial devices, matched by USB serial ID.
 #
-# The IDs below are placeholders from Capybara's Jetson. On Gerbil, run:
+# Gerbil's Jetson has different adapters than Capybara's. Find the real IDs:
 #   ls -l /dev/serial/by-id/
 #   udevadm info -q property -n /dev/ttyUSB0 | grep ID_SERIAL=
-# and replace the ENV{ID_SERIAL} values before installing.
+# then replace the REPLACE_ME values below.
 #
 # Install: sudo cp udev/99-gerbil.rules /etc/udev/rules.d/
 #          sudo udevadm control --reload-rules && sudo udevadm trigger
 # Check:   ls -l /dev/gerbil_*
 SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_ROBOCLAW", SYMLINK+="gerbil_roboclaw", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_LIDAR", SYMLINK+="gerbil_lidar", GROUP="dialout", MODE="0660"
+SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_GPS", SYMLINK+="gerbil_gps", GROUP="dialout", MODE="0660"

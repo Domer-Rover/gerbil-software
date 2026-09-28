@@ -37,6 +37,16 @@ def generate_launch_description():
         default_value='false',
     )
 
+    launch_lidar_arg = DeclareLaunchArgument(
+        'launch_lidar',
+        default_value='false',
+    )
+
+    launch_gps_arg = DeclareLaunchArgument(
+        'launch_gps',
+        default_value='false',
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -60,6 +70,8 @@ def generate_launch_description():
             'launch_zed': LaunchConfiguration('launch_zed'),
             'use_joystick': LaunchConfiguration('use_joystick'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
+            'launch_gps': LaunchConfiguration('launch_gps'),
+            'launch_lidar': LaunchConfiguration('launch_lidar'),
         }.items()
     )
 
@@ -83,6 +95,8 @@ def generate_launch_description():
         launch_zed_arg,
         use_duty_cycle_arg,
         use_joystick_arg,
+        launch_lidar_arg,
+        launch_gps_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,

@@ -39,8 +39,14 @@
             - '/zed/zed_node/path_odom'
             - '/zed/zed_node/imu/data'
 
-            # ── Laser scan (from ZED depth via depthimage_to_laserscan) ────
+            # ── LIDAR ───────────────────────────────────────────────────────
             - '/scan'
+
+            # ── GPS (u-blox, launch_gps:=true) ─────────────────────────────
+            - '/fix'
+            - '/fix_velocity'
+            - '/gps/.*'
+            - '/ublox.*'
 
             # ── Joystick teleop (use_joystick:=true) ───────────────────────
             - '/joy'

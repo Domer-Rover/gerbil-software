@@ -1,5 +1,5 @@
 # Nav2 config for Gerbil: odom-only navigation (no map, no AMCL).
-# Obstacle source is /scan from depthimage_to_laserscan (ZED depth), not a LIDAR.
+# Obstacle source is /scan from the LD19 LIDAR (360 deg, ~12 m).
 # Uses rolling costmaps in the odom frame for obstacle detection.
 # Stack: Smac Hybrid-A* (kinematically feasible paths) + RPP (geometric follower).
 # The Hybrid-A* choice avoids in-place rotations that stall the weight-biased rover.
@@ -153,9 +153,9 @@ global_costmap:
         combination_method: 1   # max — prevents over-inflation when obstacles overlap
         scan:
           topic: /scan
-          obstacle_max_range: 5.0
+          obstacle_max_range: 8.0
           obstacle_min_range: 0.15
-          raytrace_max_range: 5.0
+          raytrace_max_range: 8.0
           raytrace_min_range: 0.1
           max_obstacle_height: 2.0
           min_obstacle_height: 0.05

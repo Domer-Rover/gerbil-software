@@ -26,15 +26,15 @@ ssh -T git@github.com                              # confirms GitHub key works
 
 ## Serial devices
 
-Gerbil has its own Jetson, so the USB adapter serial numbers differ from
-Capybara's. Fill them in before installing the rules:
+Gerbil's Jetson has different USB adapters than Capybara's, so fill in the real
+IDs before installing the rules:
 
 ```bash
 ls -l /dev/serial/by-id/
 udevadm info -q property -n /dev/ttyUSB0 | grep ID_SERIAL=
 ```
 
-Put that ID into `udev/99-gerbil.rules`, then:
+Put them into `udev/99-gerbil.rules`, then:
 
 ```bash
 sudo cp udev/99-gerbil.rules /etc/udev/rules.d/
@@ -45,7 +45,17 @@ ls -l /dev/gerbil_*
 
 | Name | Device |
 |---|---|
-| `/dev/gerbil_roboclaw` | One RoboClaw (address 128), both wheels |
+| `/dev/gerbil_roboclaw` | RoboClaw (address 128), both wheels + encoders |
+| `/dev/gerbil_lidar` | LD19 LIDAR |
+| `/dev/gerbil_gps` | u-blox GPS |
 
-No LIDAR and no GPS on Gerbil: obstacles come from the ZED depth image via
-`depthimage_to_laserscan`.
+## LIDAR driver
+
+`ldlidar_stl_ros2` is not in the ROS index and is not vendored in this repo.
+Clone it into the workspace once:
+
+```bash
+cd ~/gerbil-software/src/vendors
+git clone https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2.git
+cd ~/gerbil-software && colcon build --symlink-install
+```

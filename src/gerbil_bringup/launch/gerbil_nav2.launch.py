@@ -2,8 +2,8 @@
 """Nav2 for Gerbil: odom-only navigation, indoors.
 
 No map, no AMCL — goals are relative to wherever the robot booted. Obstacles
-come from /scan, produced by depthimage_to_laserscan off the ZED depth image
-(Gerbil has no LIDAR), so the field of view is ~110 deg forward, not 360.
+come from the LD19 LIDAR on /scan (driver + laser_filters live in
+gerbil.launch.xml, launched here with launch_lidar:=true).
 
   ros2 launch gerbil_bringup gerbil_nav2.launch.py use_duty_cycle:=false
 
@@ -31,6 +31,12 @@ def generate_launch_description():
         'use_joystick',
         default_value='true',
         description='Joystick override (recommended outdoors)'
+    )
+
+    launch_gps_arg = DeclareLaunchArgument(
+        'launch_gps',
+        default_value='false',
+        description='Launch the u-blox GPS node (publishes /fix)'
     )
 
     use_duty_cycle_arg = DeclareLaunchArgument(
@@ -64,6 +70,8 @@ def generate_launch_description():
             'launch_zed': 'true',
             'use_joystick': LaunchConfiguration('use_joystick'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
+            'launch_lidar': 'true',
+            'launch_gps': LaunchConfiguration('launch_gps'),
         }.items()
     )
 
@@ -75,21 +83,6 @@ def generate_launch_description():
         parameters=[
             PathJoinSubstitution([gerbil_bringup_share, 'config', 'foxglove_bridge.yaml']),
             {'port': LaunchConfiguration('foxglove_port')},
-        ],
-        output='screen'
-    )
-
-    # ZED depth image -> 2D laser scan (Gerbil has no LIDAR)
-    depthimage_to_laserscan = Node(
-        package='depthimage_to_laserscan',
-        executable='depthimage_to_laserscan_node',
-        name='depthimage_to_laserscan_node',
-        parameters=[PathJoinSubstitution([
-            gerbil_bringup_share, 'config', 'depthimage_to_laserscan.yaml'])],
-        remappings=[
-            ('depth', '/zed/zed_node/depth/depth_registered'),
-            ('depth_camera_info', '/zed/zed_node/depth/camera_info'),
-            ('scan', '/scan'),
         ],
         output='screen'
     )
@@ -151,11 +144,11 @@ def generate_launch_description():
         use_mock_hardware_arg,
         use_joystick_arg,
         use_duty_cycle_arg,
+        launch_gps_arg,
         foxglove_port_arg,
         # Robot base (controllers + ZED + LIDAR)
         capybara_launch,
         foxglove_bridge,
-        depthimage_to_laserscan,
         # Navigation (odom-only, no map/AMCL)
         controller_server,
         planner_server,

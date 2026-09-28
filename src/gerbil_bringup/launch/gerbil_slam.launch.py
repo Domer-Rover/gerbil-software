@@ -34,6 +34,7 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
+            'launch_lidar': 'true',
             'launch_rviz': 'false',
             'launch_imu': 'false',
             'launch_zed': 'true',
@@ -52,26 +53,6 @@ def generate_launch_description():
             'max_qos_depth': 10,
             'send_buffer_limit': 10000000,
         }],
-        output='screen'
-    )
-
-    # Convert ZED depth image to 2D laser scan for SLAM Toolbox
-    depthimage_to_laserscan = Node(
-        package='depthimage_to_laserscan',
-        executable='depthimage_to_laserscan_node',
-        name='depthimage_to_laserscan_node',
-        parameters=[
-            PathJoinSubstitution([
-                gerbil_bringup_share,
-                'config',
-                'depthimage_to_laserscan.yaml'
-            ])
-        ],
-        remappings=[
-            ('depth', '/zed/zed_node/depth/depth_registered'),
-            ('depth_camera_info', '/zed/zed_node/depth/camera_info'),
-            ('scan', '/scan'),
-        ],
         output='screen'
     )
 
@@ -95,6 +76,5 @@ def generate_launch_description():
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,
-        depthimage_to_laserscan,
         slam_toolbox,
     ])

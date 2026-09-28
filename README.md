@@ -1,7 +1,8 @@
 # gerbil-software (ROS 2)
 
 Software for **Gerbil**, the Domer Rover two-wheel test robot: ROS 2 Humble on a
-Jetson, ZED2i, BNO055 IMU, one RoboClaw driving both wheels with encoders.
+Jetson, ZED2i, LD19 LIDAR, u-blox GPS, BNO055 IMU, and one RoboClaw driving both
+wheels with encoders.
 
 Gerbil is the indoor testbed for the Capybara rover's navigation stack: same
 packages, same launch layout, smaller and easier to carry upstairs. Nav2 tuning
@@ -14,6 +15,8 @@ cd ~/gerbil-software
 colcon build --symlink-install && source install/setup.bash
 ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_joystick:=true
 ```
+
+Foxglove: `ws://<jetson>:8765`
 
 ## Layout
 

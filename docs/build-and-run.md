@@ -23,7 +23,9 @@ ros2 launch gerbil_bringup gerbil_slam.launch.py       # build a map
 ```
 
 Common args: `use_mock_hardware:=true`, `use_joystick:=true`, `launch_zed:=false`,
-`use_duty_cycle:=false` (closed-loop velocity PID; see below).
+`launch_lidar:=true`, `launch_gps:=true`, `use_duty_cycle:=false` (closed-loop
+velocity PID; see below). The Nav2 and SLAM launches turn the LIDAR on
+themselves.
 
 Odometry: `robot_localization` fuses wheel odometry with ZED VIO and publishes
 `odom -> base_footprint` on `/odometry/filtered`. The ZED node runs with
@@ -61,9 +63,10 @@ Joystick (`use_joystick:=true`): hold **L1** as the deadman, left stick to drive
 ros2 launch gerbil_bringup gerbil_nav2.launch.py use_joystick:=true
 ```
 
-Check `/scan` in Foxglove first: it only covers the ZED's ~110 deg forward
-field of view, so anything beside or behind the robot is invisible to Nav2.
-Then send a 3 m goal:
+Check `/scan` in Foxglove first: objects in front of the robot must appear in
+front. The LIDAR mount rotation in the URDF is a guess copied from Capybara,
+and `laser_filter.yaml` crops the rear half, so a wrong assumption shows up as
+a scan that is 90 or 180 degrees off. Then send a 3 m goal:
 
 ```bash
 ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \
@@ -76,7 +79,7 @@ Record it:
 mkdir -p ~/bags
 ros2 bag record -o ~/bags/nav2_$(date +%F_%H%M) \
   /scan /odometry/filtered /diff_drive_controller/odom /zed/zed_node/odom \
-  /tf /tf_static /diff_drive_controller/cmd_vel_unstamped /plan /goal_pose
+  /fix /tf /tf_static /diff_drive_controller/cmd_vel_unstamped /plan /goal_pose
 ```
 
 Odometry sanity check: drive a closed loop by hand and compare where
@@ -118,10 +121,11 @@ If tmux is missing: `sudo apt install tmux` (admin).
 ## Checklist before driving
 
 1. `ls -l /dev/gerbil_*` — udev names exist
-2. `python3 scripts/serial_timeout.py` — not `DISABLED`
-3. `ros2 control list_controllers` — both controllers active
-4. `ros2 topic hz /odometry/filtered` — EKF publishing
-5. `ros2 run tf2_ros tf2_echo odom base_footprint` — one publisher, no jumps
+2. `ros2 topic echo /scan --once` — LIDAR alive, front arc correct in Foxglove
+3. `python3 scripts/serial_timeout.py` — not `DISABLED`
+4. `ros2 control list_controllers` — both controllers active
+5. `ros2 topic hz /odometry/filtered` — EKF publishing
+6. `ros2 run tf2_ros tf2_echo odom base_footprint` — one publisher, no jumps
 6. Joystick drives before sending any Nav2 goal
 
 ## Motor safety
