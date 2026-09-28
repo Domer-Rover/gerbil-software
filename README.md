@@ -48,7 +48,9 @@ Unlike Capybara, Gerbil has wheel encoders, so it runs closed-loop velocity cont
 
 ## Getting Started
 
-Each developer has their own account and clone on the Jetson ([Jetson setup](docs/jetson-setup.md)).
+Fresh Jetson? Work through [docs/first-setup.md](docs/first-setup.md) — device
+names, motor safety, encoders, LIDAR check, then Nav2. Accounts and SSH keys are
+in [Jetson setup](docs/jetson-setup.md).
 
 ```bash
 ssh <username>@<jetson>
