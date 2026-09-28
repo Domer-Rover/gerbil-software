@@ -1,6 +1,11 @@
 <launch>
     <!-- ==================== ARGUMENTS ==================== -->
     <arg name="use_mock_hardware" default="true" />
+    <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
+    <arg name="serial_port" default="/dev/ttyTHS1" />
+    <arg name="use_joystick" default="false" />
+    <arg name="launch_lidar" default="false" />
+    <arg name="launch_gps" default="false" />
     <arg name="launch_rviz" default="true" />
     <arg name="launch_zed" default="true" />
 
@@ -13,13 +18,13 @@
     <!-- ==================== ROBOT STATE PUBLISHER ==================== -->
     <node pkg="robot_state_publisher" exec="robot_state_publisher">
         <param name="robot_description"
-               value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware)')" />
+               value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
     </node>
 
     <!-- ==================== ROS2 CONTROL ==================== -->
     <node pkg="controller_manager" exec="ros2_control_node" output="screen">
         <param name="robot_description"
-               value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware)')" />
+               value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
         <param from="$(find-pkg-share gerbil_bringup)/config/gerbil_controllers.yaml" />
     </node>
 
@@ -32,7 +37,7 @@
         <include file="$(find-pkg-share zed_wrapper)/launch/zed_camera.launch.py">
             <arg name="camera_model" value="zed2i" />
             <arg name="publish_urdf" value="true" />
-            <arg name="publish_tf" value="true" />
+            <arg name="publish_tf" value="false" />  <!-- EKF owns odom -> base_footprint -->
             <arg name="publish_map_tf" value="false" />
         </include>
     </group>
@@ -41,5 +46,54 @@
     <group if="$(var launch_rviz)">
         <node pkg="rviz2" exec="rviz2" output="screen"
               args="-d $(var rviz_config_path)" />
+    </group>
+    <!-- ==================== LIDAR (LD19) ==================== -->
+    <!-- Driver publishes /scan_raw; laser_filters crops the robot body and
+         the rear half, publishing /scan for Nav2. -->
+    <group if="$(var launch_lidar)">
+        <node pkg="ldlidar_stl_ros2" exec="ldlidar_stl_ros2_node" name="ldlidar_node" output="screen">
+            <param name="product_name" value="LDLiDAR_LD06" />
+            <param name="topic_name" value="scan_raw" />
+            <param name="port_name" value="/dev/gerbil_lidar" />
+            <param name="port_baudrate" value="230400" />
+            <param name="laser_scan_dir" value="true" />
+            <param name="frame_id" value="laser_frame" />
+        </node>
+        <node pkg="laser_filters" exec="scan_to_scan_filter_chain" output="screen">
+            <param from="$(find-pkg-share gerbil_bringup)/config/laser_filter.yaml" />
+            <remap from="scan" to="scan_raw" />
+            <remap from="scan_filtered" to="scan" />
+        </node>
+    </group>
+
+    <!-- ==================== GPS (u-blox) ==================== -->
+    <group if="$(var launch_gps)">
+        <node pkg="ublox_gps" exec="ublox_gps_node" name="gps" output="screen">
+            <param name="device" value="/dev/gerbil_gps" />
+            <param name="frame_id" value="gps" />
+            <param name="uart1.baudrate" value="38400" />
+            <param name="publish.nav.posllh" value="true" />
+            <param name="publish.nav.status" value="true" />
+            <param name="publish.nav.pvt" value="true" />
+        </node>
+    </group>
+
+    <!-- ==================== EKF (odom -> base_footprint) ==================== -->
+    <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node" output="screen">
+        <param from="$(find-pkg-share gerbil_bringup)/config/ekf.yaml" />
+    </node>
+
+    <!-- ==================== JOYSTICK TELEOP ==================== -->
+    <!-- Hold L1 (button 4) as the deadman, left stick to drive -->
+    <group if="$(var use_joystick)">
+        <node pkg="joy" exec="joy_node" name="joy_node" output="screen" />
+        <node pkg="teleop_twist_joy" exec="teleop_node" name="teleop_twist_joy" output="screen">
+            <param name="enable_button" value="4" />
+            <param name="axis_linear.x" value="1" />
+            <param name="axis_angular.yaw" value="0" />
+            <param name="scale_linear.x" value="0.3" />
+            <param name="scale_angular.yaw" value="1.0" />
+            <remap from="cmd_vel" to="/diff_drive_controller/cmd_vel_unstamped" />
+        </node>
     </group>
 </launch>

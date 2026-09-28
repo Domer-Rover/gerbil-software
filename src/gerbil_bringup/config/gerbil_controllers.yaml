@@ -27,8 +27,8 @@ diff_drive_controller:
     
     # open_loop: true means odometry is calculated from commanded velocities
     # (not encoder feedback) - good for no/unreliable encoders
-    open_loop: true
-    enable_odom_tf: false
+    open_loop: false   # odometry from encoder positions (requires use_duty_cycle:=false)
+    enable_odom_tf: false  # the EKF publishes odom -> base_footprint
     
     # Covariance for odometry (higher = less certain)
     pose_covariance_diagonal: [0.1, 0.1, 0.0, 0.0, 0.0, 0.1]

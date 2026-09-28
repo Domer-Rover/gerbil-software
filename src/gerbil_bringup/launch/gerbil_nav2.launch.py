@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""Nav2 for Gerbil: odom-only navigation, indoors.
+
+No map, no AMCL — goals are relative to wherever the robot booted. Obstacles
+come from the LD19 LIDAR on /scan (driver + laser_filters live in
+gerbil.launch.xml, launched here with launch_lidar:=true).
+
+  ros2 launch gerbil_bringup gerbil_nav2.launch.py use_duty_cycle:=false
+
+Send a 3 m goal:
+  ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \\
+    "{header: {frame_id: 'odom'}, pose: {position: {x: 3.0}, orientation: {w: 1.0}}}"
+"""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -15,6 +27,24 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
+    use_joystick_arg = DeclareLaunchArgument(
+        'use_joystick',
+        default_value='true',
+        description='Joystick override (recommended outdoors)'
+    )
+
+    launch_gps_arg = DeclareLaunchArgument(
+        'launch_gps',
+        default_value='false',
+        description='Launch the u-blox GPS node (publishes /fix)'
+    )
+
+    use_duty_cycle_arg = DeclareLaunchArgument(
+        'use_duty_cycle',
+        default_value='true',
+        description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -27,12 +57,8 @@ def generate_launch_description():
         gerbil_bringup_share, 'config', 'nav2_params.yaml'
     ])
 
-    map_yaml = PathJoinSubstitution([
-        gerbil_bringup_share, 'maps', 'gerbil_map.yaml'
-    ])
-
     # Base robot launch (controllers, ZED, robot_state_publisher)
-    gerbil_launch = IncludeLaunchDescription(
+    capybara_launch = IncludeLaunchDescription(
         AnyLaunchDescriptionSource([
             PathJoinSubstitution([
                 gerbil_bringup_share, 'launch', 'gerbil.launch.xml'
@@ -42,72 +68,26 @@ def generate_launch_description():
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
             'launch_zed': 'true',
+            'use_joystick': LaunchConfiguration('use_joystick'),
+            'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
+            'launch_lidar': 'true',
+            'launch_gps': LaunchConfiguration('launch_gps'),
         }.items()
     )
 
-    # Foxglove bridge for remote visualization
+    # Foxglove bridge
     foxglove_bridge = Node(
         package='foxglove_bridge',
         executable='foxglove_bridge',
         name='foxglove_bridge',
-        parameters=[{
-            'port': LaunchConfiguration('foxglove_port'),
-            'address': '0.0.0.0',
-            'num_threads': 4,
-            'max_qos_depth': 10,
-            'send_buffer_limit': 41943040,
-        }],
-        output='screen'
-    )
-
-    # Convert ZED depth image to 2D laser scan for AMCL
-    depthimage_to_laserscan = Node(
-        package='depthimage_to_laserscan',
-        executable='depthimage_to_laserscan_node',
-        name='depthimage_to_laserscan_node',
         parameters=[
-            PathJoinSubstitution([
-                gerbil_bringup_share, 'config', 'depthimage_to_laserscan.yaml'
-            ])
-        ],
-        remappings=[
-            ('depth', '/zed/zed_node/depth/depth_registered'),
-            ('depth_camera_info', '/zed/zed_node/depth/camera_info'),
-            ('scan', '/scan'),
+            PathJoinSubstitution([gerbil_bringup_share, 'config', 'foxglove_bridge.yaml']),
+            {'port': LaunchConfiguration('foxglove_port')},
         ],
         output='screen'
     )
 
-    # --- Localization (map_server + AMCL) ---
-
-    map_server = Node(
-        package='nav2_map_server',
-        executable='map_server',
-        name='map_server',
-        output='screen',
-        parameters=[nav2_params, {'yaml_filename': map_yaml}],
-    )
-
-    amcl = Node(
-        package='nav2_amcl',
-        executable='amcl',
-        name='amcl',
-        output='screen',
-        parameters=[nav2_params],
-    )
-
-    lifecycle_manager_localization = Node(
-        package='nav2_lifecycle_manager',
-        executable='lifecycle_manager',
-        name='lifecycle_manager_localization',
-        output='screen',
-        parameters=[{
-            'autostart': True,
-            'node_names': ['map_server', 'amcl'],
-        }],
-    )
-
-    # --- Nav2 Navigation Nodes ---
+    # --- Nav2 (odom-only, no map/AMCL) ---
 
     controller_server = Node(
         package='nav2_controller',
@@ -143,20 +123,6 @@ def generate_launch_description():
         parameters=[nav2_params],
     )
 
-    # --- ArUco Marker Detection (OpenCV, DICT_6X6_250) ---
-
-    aruco_detector = Node(
-        package='gerbil_bringup',
-        executable='aruco_detector.py',
-        name='aruco_detector',
-        output='screen',
-        parameters=[{
-            'marker_size': 0.15,
-            'dictionary_id': 10,
-            'camera_frame': 'zed_left_camera_optical_frame',
-        }],
-    )
-
     lifecycle_manager_navigation = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -172,24 +138,22 @@ def generate_launch_description():
             ],
         }],
     )
+    
 
     return LaunchDescription([
         use_mock_hardware_arg,
+        use_joystick_arg,
+        use_duty_cycle_arg,
+        launch_gps_arg,
         foxglove_port_arg,
-        # Robot base
-        gerbil_launch,
+        # Robot base (controllers + ZED + LIDAR)
+        capybara_launch,
         foxglove_bridge,
-        depthimage_to_laserscan,
-        # Localization
-        map_server,
-        amcl,
-        lifecycle_manager_localization,
-        # Navigation
+        # Navigation (odom-only, no map/AMCL)
         controller_server,
         planner_server,
         behavior_server,
         bt_navigator,
         lifecycle_manager_navigation,
-        # ArUco detection
-        aruco_detector,
+        # Future object-detection feature:  
     ])

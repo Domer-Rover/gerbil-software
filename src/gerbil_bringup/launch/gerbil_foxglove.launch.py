@@ -21,6 +21,26 @@ def generate_launch_description():
         description='Launch ZED2i camera'
     )
 
+    use_duty_cycle_arg = DeclareLaunchArgument(
+        'use_duty_cycle',
+        default_value='true',
+    )
+
+    use_joystick_arg = DeclareLaunchArgument(
+        'use_joystick',
+        default_value='false',
+    )
+
+    launch_lidar_arg = DeclareLaunchArgument(
+        'launch_lidar',
+        default_value='false',
+    )
+
+    launch_gps_arg = DeclareLaunchArgument(
+        'launch_gps',
+        default_value='false',
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -41,6 +61,10 @@ def generate_launch_description():
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
             'launch_zed': LaunchConfiguration('launch_zed'),
+            'use_joystick': LaunchConfiguration('use_joystick'),
+            'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
+            'launch_gps': LaunchConfiguration('launch_gps'),
+            'launch_lidar': LaunchConfiguration('launch_lidar'),
         }.items()
     )
 
@@ -74,6 +98,10 @@ def generate_launch_description():
     return LaunchDescription([
         use_mock_hardware_arg,
         launch_zed_arg,
+        use_duty_cycle_arg,
+        use_joystick_arg,
+        launch_lidar_arg,
+        launch_gps_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,

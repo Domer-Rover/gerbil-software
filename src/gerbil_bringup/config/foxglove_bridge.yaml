@@ -1,0 +1,74 @@
+# Foxglove bridge shared configuration for all Capybara launch files.
+# port is NOT set here — it is overridden per-launch via the foxglove_port launch arg.
+#
+# topic_whitelist: only these topics are forwarded to Foxglove clients.
+# Covers every topic needed across all launch files:
+#   gerbil_foxglove  · gerbil_nav2  · gerbil_slam
+# Patterns are regex — trailing .* matches all subtopics.
+/**:
+    ros__parameters:
+        address: '0.0.0.0'
+        num_threads: 4
+        max_qos_depth: 20         # tf_static needs depth > 1 (TRANSIENT_LOCAL, multi-message)
+        send_buffer_limit: 10485760  # 10 MB: drop old frames instead of buffering
+
+        topic_whitelist:
+            # ── Core transforms & robot model ──────────────────────────────
+            - '/tf'
+            - '/tf_static'
+            - '/robot_description'
+            - '/joint_states'
+
+            # ── Drive controller ───────────────────────────────────────────
+            # cmd_vel_unstamped: what Nav2 (or teleop) is actually commanding
+            - '/diff_drive_controller/cmd_vel_unstamped'
+            - '/diff_drive_controller/odom'
+            - '/odometry/filtered'
+            - '/imu/data'
+
+            # ── ZED2i — video feed (compressed only), odometry, IMU ────────
+            # Use /compressed in Foxglove image panel — NOT the raw topic.
+            # Raw feed will saturate 2.4GHz instantly.
+            # Topic names changed in ZED SDK 5.x (left/image_rect_color → rgb/color/rect/image).
+            - '/zed/zed_node/rgb/color/rect/image/compressed'
+            - '/zed/zed_node/rgb/color/rect/camera_info'
+            - '/zed/zed_node/odom'
+            - '/zed/zed_node/pose'
+            - '/zed/zed_node/pose_with_covariance'
+            - '/zed/zed_node/pose/status'
+            - '/zed/zed_node/path_odom'
+            - '/zed/zed_node/imu/data'
+
+            # ── LIDAR ───────────────────────────────────────────────────────
+            - '/scan'
+
+            # ── GPS (u-blox, launch_gps:=true) ─────────────────────────────
+            - '/fix'
+            - '/fix_velocity'
+            - '/gps/.*'
+            - '/ublox.*'
+
+            # ── Joystick teleop (use_joystick:=true) ───────────────────────
+            - '/joy'
+
+            # ── Nav2 — goals, plans, costmaps, footprints, status ──────────
+            # These are all small/low-rate — safe to forward at full fidelity.
+            - '/goal_pose'
+            - '/plan'
+            - '/local_plan'
+            - '/local_costmap/costmap'
+            - '/local_costmap/published_footprint'
+            - '/global_costmap/costmap'
+            - '/global_costmap/published_footprint'
+            - '/navigate_to_pose/.*'
+
+            # ── SLAM Toolbox ────────────────────────────────────────────────
+            - '/map'
+            - '/map_metadata'
+            - '/slam_toolbox/scan_visualization'
+            - '/slam_toolbox/pose'
+
+            # ── Diagnostics ────────────────────────────────────────────────
+            - '/diagnostics'
+            - '/rosout'
+            # in the future we add david's node's topics here too

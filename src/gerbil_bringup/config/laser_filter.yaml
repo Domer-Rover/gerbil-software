@@ -1,0 +1,35 @@
+# /scan_raw (LD19 driver) -> /scan (used by Nav2 costmaps)
+#
+# filter1 removes returns from the rover itself (chassis + the two rear
+# antennas). It works in base_link via TF, so it does not depend on the
+# LIDAR's angle convention or mounting rotation.
+#
+# filter2 keeps only the forward half of the scan.
+#   Antennas sit at x=-0.3556, y=+/-0.254 in base_link, i.e. ~145 deg off the
+#   front. They were still showing up as obstacles with bounds [0, pi], which
+#   means [0, pi] was keeping the REAR half -- the LD19 driver runs with
+#   laser_scan_dir=true, which flips the direction the URDF rotation assumed.
+#   Hence [pi, 2pi] here.
+#   VERIFY in Foxglove: stand in front of the rover; you should see returns.
+#   If the front is blank and the rear is populated, swap back to [0, 3.1416].
+scan_to_scan_filter_chain:
+  ros__parameters:
+    filter1:
+      name: rover_body
+      type: laser_filters/LaserScanBoxFilter
+      params:
+        box_frame: base_link
+        min_x: -0.55
+        max_x:  0.45
+        min_y: -0.36
+        max_y:  0.36
+        min_z: -1.0
+        max_z:  1.0
+        invert: false
+
+    filter2:
+      name: front_180_only
+      type: laser_filters/LaserScanAngularBoundsFilter
+      params:
+        lower_angle: 3.1416
+        upper_angle: 6.2832
