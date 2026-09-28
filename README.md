@@ -1,24 +1,33 @@
 # gerbil-software (ROS 2)
-Welcome to the software repo for the Gerbil navigation robot! This document will give you a brief description of the repo's layout and an overview of the repo.
 
-[![Static Badge](https://img.shields.io/badge/Software_Lead-Brandon_Martinez-C1E1C1)](https://github.com/bemndy)
+Software for **Gerbil**, the Domer Rover two-wheel test robot: ROS 2 Humble on a
+Jetson, ZED2i, BNO055 IMU, one RoboClaw driving both wheels with encoders.
 
-## Directory Structure
+Gerbil is the indoor testbed for the Capybara rover's navigation stack: same
+packages, same launch layout, smaller and easier to carry upstairs. Nav2 tuning
+proven here gets ported to [capybara-software](https://github.com/Domer-Rover/capybara-software).
 
-- **.github**
-  _CI pipeline and PR/issue templates_
-- **gerbil_bringup**
-  _Launch files and configuration_
-- **.gerbil_description**
-  _Hardware Description for ros2\_control_
-- **gerbil_driving**
-  _Driving package for robot\_localization_
-- **.gerbil_hw**
-  _Hardware Interface for ros2\_control_
-- **.scripts**
-  _Helper scripts for mainly testing and setup_
-- **.vendors**
-  _Manually installed external libraries_
-- **Dockerfile**
-  _Dockerfile for vnc and headless containers_
+## Quick start
 
+```bash
+cd ~/gerbil-software
+colcon build --symlink-install && source install/setup.bash
+ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_joystick:=true
+```
+
+## Layout
+
+| Path | Contents |
+|---|---|
+| `src/gerbil_bringup` | Launch files, Nav2/SLAM/EKF/controller configs |
+| `src/gerbil_description` | URDF and ros2_control block |
+| `src/gerbil_hw` | RoboClaw ros2_control hardware interface |
+| `src/imu_package` | BNO055 IMU driver |
+| `src/vendors` | ZED ROS 2 wrapper, roboclaw_serial |
+| `scripts` | Dev onboarding and hardware test scripts |
+| `udev` | Stable serial device names |
+
+## Docs
+
+- [Jetson setup](docs/jetson-setup.md): accounts, SSH keys, serial devices
+- [Build and run](docs/build-and-run.md): build, launch, closed-loop encoders, Nav2
