@@ -7,7 +7,9 @@
             camera_model: 'zed2i'
             camera_name: 'zed' # usually overwritten by launch file
             grab_resolution: 'HD720' # Orin Nano can handle HD720 at 30fps
-            grab_frame_rate: 15 # VGA at 30fps is fine for Jetson Nano, using compression for bandwidth
+            grab_frame_rate: 30 # VIO tracks features between frames: at 15 fps the camera moves
+                                # twice as far per frame, so matches fail sooner and drift grows.
+                                # ZED2i supports HD720 at 15/30/60 and VGA up to 100.
 
         depth:
             min_depth: 0.3 # Min: 0.3, Max: 3.0

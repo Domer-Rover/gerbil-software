@@ -35,9 +35,10 @@
             # ── ZED2i — video feed (compressed only), odometry, IMU ────────
             # Use /compressed in Foxglove image panel — NOT the raw topic.
             # Raw feed will saturate 2.4GHz instantly.
-            # Topic names changed in ZED SDK 5.x (left/image_rect_color → rgb/color/rect/image).
-            - '/zed/zed_node/rgb/color/rect/image/compressed'
-            - '/zed/zed_node/rgb/color/rect/camera_info'
+            # This repo vendors zed_wrapper 4.2.1, which publishes
+            # rgb/image_rect_color (SDK 5.x renamed it to rgb/color/rect/image).
+            - '/zed/zed_node/rgb/image_rect_color/compressed'
+            - '/zed/zed_node/rgb/camera_info'
             - '/zed/zed_node/odom'
             - '/zed/zed_node/pose'
             - '/zed/zed_node/pose_with_covariance'
