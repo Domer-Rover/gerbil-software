@@ -49,13 +49,3 @@ ls -l /dev/gerbil_*
 | `/dev/gerbil_lidar` | LD19 LIDAR |
 | `/dev/gerbil_gps` | u-blox GPS |
 
-## LIDAR driver
-
-`ldlidar_stl_ros2` is not in the ROS index and is not vendored in this repo.
-Clone it into the workspace once:
-
-```bash
-cd ~/gerbil-software/src/vendors
-git clone https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2.git
-cd ~/gerbil-software && colcon build --symlink-install
-```

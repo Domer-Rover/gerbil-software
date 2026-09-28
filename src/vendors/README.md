@@ -16,6 +16,13 @@ Third-party ROS2 packages vendored for build consistency and offline development
 - License: See package LICENSE
 - Contains: `zed_components`, `zed_wrapper`, `zed_debug`, `zed_ros2`
 
+### ldlidar_stl_ros2
+- Source: [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2)
+- Version: vendored 2026-09-28 (upstream bf668a8)
+- Purpose: driver for the LD19 LIDAR (configured as LDLiDAR_LD06 — same sensor core)
+- License: See package LICENSE
+- Not in the ROS index, which is why it is vendored rather than installed with rosdep
+
 ## Updating
 
 ```bash

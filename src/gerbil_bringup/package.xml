@@ -21,7 +21,6 @@
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>laser_filters</exec_depend>
   <exec_depend>ublox_gps</exec_depend>
-  <!-- ldlidar_stl_ros2 is not in the ROS index; clone it into src/vendors -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
