@@ -33,13 +33,21 @@ cutoff — that threshold is damage protection, not a discharge target.
 
 ## Logic battery
 
-The "Logic Battery High" fault (error LED blinks twice) means the measured
-logic voltage exceeded this maximum. Measure LB+ to LB− before setting it.
+The DC-DC converter powers the Jetson only, so the RoboClaw's logic runs off
+the main battery (onboard main-to-logic path, or a B+ to LB+ jumper). The logic
+voltage it measures is therefore the pack: 22.8 V nominal, 26.1 V full.
 
-| If LB+ measures | Minimum | Maximum |
-|---|---|---|
-| ~12 V (from the DC-DC converter) | 10.0 V | 16.0 V |
-| ~22-26 V (fed from the pack, or jumpered to main) | 20.0 V | 27.0 V |
+| Setting | Value |
+|---|---|
+| Logic Battery Maximum | **27.0 V** |
+| Logic Battery Minimum | **20.0 V** |
+
+A maximum below 26.1 V causes the "Logic Battery High" fault — error LED blinks
+twice, motors freewheel until reset. That was the fault seen on 2026-09-30.
+
+Before raising it, confirm the logic input's rated range in the 2x60A manual.
+If 26 V is outside it, feed LB+ 12 V from the converter instead of raising the
+threshold.
 
 ## Current limits
 
