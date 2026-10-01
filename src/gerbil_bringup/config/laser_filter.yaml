@@ -19,10 +19,10 @@ scan_to_scan_filter_chain:
       type: laser_filters/LaserScanBoxFilter
       params:
         box_frame: base_link
-        min_x: -0.55
-        max_x:  0.45
-        min_y: -0.36
-        max_y:  0.36
+        min_x: -0.33   # chassis is 0.61 long: half is 0.305, plus a small margin
+        max_x:  0.33
+        min_y: -0.26   # wheel span 0.455 wide: half is 0.228, plus margin
+        max_y:  0.26
         min_z: -1.0
         max_z:  1.0
         invert: false
