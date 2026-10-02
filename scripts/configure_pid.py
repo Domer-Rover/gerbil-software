@@ -3,7 +3,7 @@
 
 from basicmicro import Basicmicro
 
-PORT = "/dev/ttyTHS1"
+PORT = "/dev/gerbil_roboclaw"
 BAUDRATE = 38400
 ADDRESS = 0x80
 
@@ -24,10 +24,9 @@ ADDRESS = 0x80
 # D: Derivative gain - dampens oscillations (usually keep low or 0)
 # QPPS: Quadrature Pulses Per Second - max encoder speed your motor can achieve
 
-# For a typical hobby motor with 500 QPPR:
-# - At 100 RPM: ~833 encoder counts/sec
-# - At 200 RPM: ~1666 encoder counts/sec
-# Using 44000 as a safe maximum for typical motors
+# goBILDA 5304-8002-0100 (99.5:1, 180 RPM @ 24 V, 2786.2 PPR at the output shaft):
+#   180 RPM = 3 rev/s, so 3 x 2786.2 = ~8360 counts/sec at no load.
+# Prefer the value Motion Studio reports at full duty over this estimate.
 
 # GENTLE PID values for smooth, controlled operation
 # Lower P = less aggressive response, smoother acceleration
@@ -35,7 +34,7 @@ ADDRESS = 0x80
 P_VALUE = 0.2
 I_VALUE = 0.1
 D_VALUE = 0.0
-QPPS_VALUE = 44000
+QPPS_VALUE = 8400
 
 print("RoboClaw Velocity PID Configuration")
 print("="*50)

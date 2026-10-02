@@ -34,10 +34,10 @@
             </command_interface>
             <state_interface name="position"/>
             <param name="address">128</param>
-            <param name="qppr">500</param>  <!-- TODO: encoder CPR x gear ratio x 4 -->
+            <param name="qppr">2786</param>  <!-- goBILDA 5304-8002-0100: 2786.2 PPR at the output shaft -->
             <param name="motor_type">M2</param>
             <!-- Motor speed (rad/s) that maps to 100 percent duty cycle. Lower = more responsive -->
-            <param name="max_duty_speed">10.0</param>
+            <param name="max_duty_speed">18.85</param>
         </joint>
         <joint name="base_right_wheel_joint">
             <command_interface name="velocity">
@@ -46,10 +46,10 @@
             </command_interface>
             <state_interface name="position"/>
             <param name="address">128</param>
-            <param name="qppr">500</param>  <!-- TODO: encoder CPR x gear ratio x 4 -->
+            <param name="qppr">2786</param>  <!-- goBILDA 5304-8002-0100: 2786.2 PPR at the output shaft -->
             <param name="motor_type">M1</param>
             <!-- Motor speed (rad/s) that maps to 100 percent duty cycle. Lower = more responsive -->
-            <param name="max_duty_speed">10.0</param>
+            <param name="max_duty_speed">18.85</param>
         </joint>
     </ros2_control>
 </robot>
