@@ -7,7 +7,7 @@
          velocity PID is tuned in Motion Studio. Then launch with
          use_duty_cycle:=false to run closed loop. -->
     <xacro:arg name="use_duty_cycle" default="true" />
-    <xacro:arg name="serial_port" default="/dev/ttyTHS1" />
+    <xacro:arg name="serial_port" default="/dev/gerbil_roboclaw" />
 
     <ros2_control name="GerbilRoboClawSystem" type="system">
         <!-- Mock hardware for simulation or testing without actual RoboClaw -->
