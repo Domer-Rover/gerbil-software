@@ -9,8 +9,14 @@
     ros__parameters:
         address: '0.0.0.0'
         num_threads: 4
-        max_qos_depth: 20         # tf_static needs depth > 1 (TRANSIENT_LOCAL, multi-message)
-        send_buffer_limit: 10485760  # 10 MB: drop old frames instead of buffering
+        max_qos_depth: 10         # shallow queues = fresher data over 2.4 GHz.
+                                  # Floor is set by /tf_static: it is TRANSIENT_LOCAL and each
+                                  # publisher (robot_state_publisher, zed state publisher, zed
+                                  # node) latches its own message. Too shallow and frames go
+                                  # missing in Foxglove.
+        send_buffer_limit: 2097152   # 2 MB. Small on purpose: over 2.4 GHz a large buffer
+                                     # just queues stale frames (bufferbloat) and the view
+                                     # lags reality. Dropping is better than delaying.
 
         topic_whitelist:
             # ── Core transforms & robot model ──────────────────────────────
@@ -29,7 +35,7 @@
             # ── ZED2i — video feed (compressed only), odometry, IMU ────────
             # Use /compressed in Foxglove image panel — NOT the raw topic.
             # Raw feed will saturate 2.4GHz instantly.
-            # Topic names changed in ZED SDK 5.x (left/image_rect_color → rgb/color/rect/image).
+            # zed_wrapper 5.2.0 naming (4.x called this rgb/image_rect_color)
             - '/zed/zed_node/rgb/color/rect/image/compressed'
             - '/zed/zed_node/rgb/color/rect/camera_info'
             - '/zed/zed_node/odom'
@@ -41,6 +47,7 @@
 
             # ── LIDAR ───────────────────────────────────────────────────────
             - '/scan'
+            - '/scan_raw'          # unfiltered, to check the crop keeps the front half
 
             # ── GPS (u-blox, launch_gps:=true) ─────────────────────────────
             - '/fix'
@@ -57,8 +64,10 @@
             - '/plan'
             - '/local_plan'
             - '/local_costmap/costmap'
+            - '/local_costmap/costmap_updates'
             - '/local_costmap/published_footprint'
             - '/global_costmap/costmap'
+            - '/global_costmap/costmap_updates'
             - '/global_costmap/published_footprint'
             - '/navigate_to_pose/.*'
 

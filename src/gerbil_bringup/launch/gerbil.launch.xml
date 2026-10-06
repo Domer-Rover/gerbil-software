@@ -2,11 +2,11 @@
     <!-- ==================== ARGUMENTS ==================== -->
     <arg name="use_mock_hardware" default="true" />
     <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
-    <arg name="serial_port" default="/dev/ttyTHS1" />
+    <arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <arg name="use_joystick" default="false" />
     <arg name="launch_lidar" default="false" />
     <arg name="launch_gps" default="false" />
-    <arg name="launch_rviz" default="true" />
+    <arg name="launch_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
     <arg name="launch_zed" default="true" />
 
     <!-- ==================== PATHS ==================== -->

@@ -40,8 +40,8 @@ diff_drive_controller:
 
     # ==================== VELOCITY/ACCELERATION LIMITS ====================
     linear.x.has_velocity_limits: true
-    linear.x.max_velocity: 0.1  # m/s (reduced for safety while tuning)
-    linear.x.min_velocity: -0.1
+    linear.x.max_velocity: 0.3  # m/s — must be >= nav2 desired_linear_vel (0.25) or nav2 is silently clamped
+    linear.x.min_velocity: -0.3
     linear.x.has_acceleration_limits: true
     linear.x.max_acceleration: 0.5  # m/s^2
 

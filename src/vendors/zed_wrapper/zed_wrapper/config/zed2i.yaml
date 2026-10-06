@@ -1,14 +1,16 @@
-#  config/zed2i_yaml
+# config/zed2i_yaml
 # Parameters for Stereolabs zed2i camera
+
 ---
 /**:
     ros__parameters:
         general:
             camera_model: 'zed2i'
-            camera_name: 'zed' # usually overwritten by launch file
-            grab_resolution: 'HD720' # Orin Nano can handle HD720 at 30fps
-            grab_frame_rate: 15 # VGA at 30fps is fine for Jetson Nano, using compression for bandwidth
+            camera_name: 'zed2i' # overwritten by launch file
+            grab_resolution: 'HD720' # 'HD2K', 'HD1080', 'HD720', 'VGA', 'AUTO'. More pixels = more trackable features
+            grab_frame_rate: 30 # HD720 supports 15/30/60 on ZED2i; 60 doubles GPU load for fast motion only
 
         depth:
-            min_depth: 0.3 # Min: 0.3, Max: 3.0
-            max_depth: 10.0 # Max: 40.0
+            min_depth: 0.2 # SDK 5.2 minimum valid value — ZED2i physical minimum is ~0.2m
+            max_depth: 15.0 # Min: 0.5, Max: 20.0
+

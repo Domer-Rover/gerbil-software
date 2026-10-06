@@ -47,13 +47,13 @@ class ArucoDetector(Node):
         qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.create_subscription(
             CameraInfo,
-            '/zed/zed_node/left/camera_info',
+            '/zed/zed_node/rgb/color/rect/camera_info',
             self._camera_info_cb,
             qos,
         )
         self.create_subscription(
             Image,
-            '/zed/zed_node/left/image_rect_color',
+            '/zed/zed_node/rgb/color/rect/image',
             self._image_cb,
             qos,
         )
