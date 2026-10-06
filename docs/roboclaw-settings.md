@@ -72,6 +72,18 @@ print('err', c.ReadError(0x80), 'V', c.ReadMainBatteryVoltage(0x80), 'I', c.Read
 c.close()"
 ```
 
+## qppr vs qpps
+
+Easy to confuse:
+
+- **qppr** = pulses per **revolution**. Fixed by the motor + gearbox. Lives in
+  `mobile_base.ros2_control.xacro`. Converts encoder ticks to radians, so a
+  wrong value scales all odometry distances.
+- **qpps** = pulses per **second** at full speed. Measured by auto-tune, stored
+  on the RoboClaw, used by its velocity PID as the 100% output scale.
+
+Related by `qpps = qppr x max revolutions per second`.
+
 ## Velocity PID (closed loop only)
 
 Measure first, tune second:
@@ -100,10 +112,33 @@ USB link mid-tune, which can leave half-written settings on the board.
 
 ## Measured values (fill in)
 
+Measured 2026-10-06 by `scripts/getPid_2.py` (log in `scripts/pid_logs/`):
+
 | Value | M1 (right) | M2 (left) |
 |---|---|---|
-| qppr | 2786 (datasheet) | 2786 (datasheet) |
-| QPPS | | |
-| P / I / D | | |
-| Current at cruise | | |
-| Current limit set | | |
+| qppr | **TODO: confirm by hand** | **TODO: confirm by hand** |
+| QPPS (measured) | 9802 | 10550 |
+| P / I / D | 10.4422 / 0.6266 / 0.0 | 10.4422 / 0.6266 / 0.0 |
+| encoder_mode | **32** (direction reversed in firmware) | **0** |
+| Step-test error | < 0.02% | < 0.02% |
+
+`encoder_mode` differs on purpose: M1 is reversed in firmware so both wheels
+count up when the robot drives forward. Do not "fix" the asymmetry.
+
+**qppr is still unconfirmed.** The script assumes `counts_per_rev = 1993.6`
+(71.2:1) while the xacro has 2786 (99.5:1). These differ by 40%, which scales
+odometry by 40%. Settle it by hand: mark the tire, note the count, turn the
+wheel exactly 10 revolutions, divide the difference by 10. Expect ~19,936 or
+~27,862 for ten turns.
+
+## Outstanding before driving
+
+From the 2026-10-06 log:
+
+- [ ] `saved_to_nvm: false` — the PID is in RAM only and is lost on power
+      cycle. Re-run `scripts/getPid_2.py --save`, power cycle, re-read.
+- [ ] `max_current_a: 120.0` on both channels (the board maximum). Set **15 A**
+      per channel.
+- [ ] `serial_timeout_s: 0.0`. Set it now that tuning is done:
+      `python3 scripts/serial_timeout.py --set 0.2`
+- [ ] Confirm `qppr` by hand and update the xacro.
