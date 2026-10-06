@@ -272,9 +272,9 @@ sudo reboot
 ### RoboClaw Communication Test
 
 ```bash
-# Test script location
-cd ~/ros2_ws/src/gerbil-software/scripts
+# From the repo root
+cd ~/ros2_ws/src/gerbil-software
 
-# Run test
-python3 test_roboclaw.py
+# Read-only: prints the board state and saves it, moves nothing
+python3 scripts/getPid_2.py --read
 ```

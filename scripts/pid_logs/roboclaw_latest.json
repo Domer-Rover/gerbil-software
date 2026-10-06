@@ -1,0 +1,236 @@
+{
+  "timestamp": "2026-10-06T18:00:33",
+  "port": "/dev/ttyACM0",
+  "address": 128,
+  "counts_per_rev": 1993.6,
+  "firmware": "USB Roboclaw 2x60A v4.4.3",
+  "before": {
+    "firmware": "USB Roboclaw 2x60A v4.4.3",
+    "M1": {
+      "velocity_pid": {
+        "p": 5.9619140625,
+        "i": 0.4968414306640625,
+        "d": 0.0,
+        "qpps": 10560
+      },
+      "position_pid": {
+        "p": 40.974609375,
+        "i": 14.765625,
+        "d": 94.7529296875,
+        "imax": 0,
+        "deadzone": 0,
+        "min": 0,
+        "max": 0
+      },
+      "encoder": 44838,
+      "encoder_mode": 32,
+      "current_a": 0.0,
+      "max_current_a": 120.0,
+      "default_accel": 655360,
+      "default_decel": 655360
+    },
+    "M2": {
+      "velocity_pid": {
+        "p": 5.40179443359375,
+        "i": 0.4051361083984375,
+        "d": 0.0,
+        "qpps": 10230
+      },
+      "position_pid": {
+        "p": 37.1708984375,
+        "i": 12.0888671875,
+        "d": 95.24609375,
+        "imax": 0,
+        "deadzone": 0,
+        "min": 0,
+        "max": 0
+      },
+      "encoder": -1494,
+      "encoder_mode": 0,
+      "current_a": 0.0,
+      "max_current_a": 120.0,
+      "default_accel": 655360,
+      "default_decel": 655360
+    },
+    "main_battery_v": 24.9,
+    "logic_battery_v": 0.0,
+    "main_battery_min_v": 19.6,
+    "main_battery_max_v": 26.8,
+    "temp_c": 19.9,
+    "temp2_c": 19.9,
+    "serial_timeout_s": 0.0,
+    "config": 99,
+    "error": 536870912,
+    "error_text": [
+      "warning: Boot Warning"
+    ]
+  },
+  "after": {
+    "firmware": "USB Roboclaw 2x60A v4.4.3",
+    "M1": {
+      "velocity_pid": {
+        "p": 10.442169189453125,
+        "i": 0.626556396484375,
+        "d": 0.0,
+        "qpps": 9802
+      },
+      "position_pid": {
+        "p": 0.0,
+        "i": 0.0,
+        "d": 0.0,
+        "imax": 0,
+        "deadzone": 0,
+        "min": -2000000000,
+        "max": 2000000000
+      },
+      "encoder": 73024,
+      "encoder_mode": 32,
+      "current_a": 0.0,
+      "max_current_a": 120.0,
+      "default_accel": 655360,
+      "default_decel": 655360
+    },
+    "M2": {
+      "velocity_pid": {
+        "p": 10.442169189453125,
+        "i": 0.626556396484375,
+        "d": 0.0,
+        "qpps": 10550
+      },
+      "position_pid": {
+        "p": 0.0,
+        "i": 0.0,
+        "d": 0.0,
+        "imax": 0,
+        "deadzone": 0,
+        "min": -2000000000,
+        "max": 2000000000
+      },
+      "encoder": 29056,
+      "encoder_mode": 0,
+      "current_a": 0.0,
+      "max_current_a": 120.0,
+      "default_accel": 655360,
+      "default_decel": 655360
+    },
+    "main_battery_v": 24.9,
+    "logic_battery_v": 0.0,
+    "main_battery_min_v": 19.6,
+    "main_battery_max_v": 26.8,
+    "temp_c": 20.0,
+    "temp2_c": 20.0,
+    "serial_timeout_s": 0.0,
+    "config": 99,
+    "error": 536870912,
+    "error_text": [
+      "warning: Boot Warning"
+    ]
+  },
+  "qpps_test": {
+    "M1": {
+      "forward": 9802,
+      "reverse": -9817,
+      "qpps": 9802,
+      "rpm": 295.0
+    },
+    "M2": {
+      "forward": 10933,
+      "reverse": -10550,
+      "qpps": 10550,
+      "rpm": 317.5
+    }
+  },
+  "written": {
+    "M1": {
+      "velocity": {
+        "p": 10.44217,
+        "i": 0.62657,
+        "d": 0.0,
+        "qpps": 9802
+      },
+      "position": {
+        "p": 0.0,
+        "i": 0.0,
+        "d": 0.0,
+        "imax": 0,
+        "deadzone": 0,
+        "min": -2000000000,
+        "max": 2000000000
+      }
+    },
+    "M2": {
+      "velocity": {
+        "p": 10.44217,
+        "i": 0.62657,
+        "d": 0.0,
+        "qpps": 10550
+      },
+      "position": {
+        "p": 0.0,
+        "i": 0.0,
+        "d": 0.0,
+        "imax": 0,
+        "deadzone": 0,
+        "min": -2000000000,
+        "max": 2000000000
+      }
+    }
+  },
+  "readback_ok": true,
+  "step_test": {
+    "M1": [
+      {
+        "target": 2450,
+        "actual": 2450,
+        "error_pct": -0.0,
+        "ok": true
+      },
+      {
+        "target": 4901,
+        "actual": 4900,
+        "error_pct": -0.02,
+        "ok": true
+      },
+      {
+        "target": 7351,
+        "actual": 7351,
+        "error_pct": 0.0,
+        "ok": true
+      },
+      {
+        "target": -4901,
+        "actual": -4901,
+        "error_pct": 0.0,
+        "ok": true
+      }
+    ],
+    "M2": [
+      {
+        "target": 2637,
+        "actual": 2637,
+        "error_pct": -0.01,
+        "ok": true
+      },
+      {
+        "target": 5275,
+        "actual": 5276,
+        "error_pct": 0.01,
+        "ok": true
+      },
+      {
+        "target": 7912,
+        "actual": 7913,
+        "error_pct": 0.02,
+        "ok": true
+      },
+      {
+        "target": -5275,
+        "actual": -5275,
+        "error_pct": 0.0,
+        "ok": true
+      }
+    ]
+  },
+  "saved_to_nvm": false,
+  "result": "ok"
+}
