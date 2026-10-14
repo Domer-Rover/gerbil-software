@@ -213,7 +213,7 @@
 
 
     <!-- LIDAR mounted on the chassis top, centred.
-         TODO: measure the real mount position and yaw. The rpy below assumes
+         TODO - measure the real mount position and yaw. The rpy below assumes
          the same 90 deg clockwise mounting as Capybara; verify in Foxglove
          that an object in front of the robot appears in front on /scan. -->
     <joint name="lidar_joint" type="fixed">
