@@ -116,7 +116,7 @@ Measured 2026-10-06 by `scripts/getPid_2.py` (log in `scripts/pid_logs/`):
 
 | Value | M1 (right) | M2 (left) |
 |---|---|---|
-| qppr | **TODO: confirm by hand** | **TODO: confirm by hand** |
+| qppr | **2785.2 measured** (xacro: 2786) | same shaft/gearbox |
 | QPPS (measured) | 9802 | 10550 |
 | P / I / D | 10.4422 / 0.6266 / 0.0 | 10.4422 / 0.6266 / 0.0 |
 | encoder_mode | **32** (direction reversed in firmware) | **0** |
@@ -125,11 +125,14 @@ Measured 2026-10-06 by `scripts/getPid_2.py` (log in `scripts/pid_logs/`):
 `encoder_mode` differs on purpose: M1 is reversed in firmware so both wheels
 count up when the robot drives forward. Do not "fix" the asymmetry.
 
-**qppr is still unconfirmed.** The script assumes `counts_per_rev = 1993.6`
-(71.2:1) while the xacro has 2786 (99.5:1). These differ by 40%, which scales
-odometry by 40%. Settle it by hand: mark the tire, note the count, turn the
-wheel exactly 10 revolutions, divide the difference by 10. Expect ~19,936 or
-~27,862 for ten turns.
+**qppr confirmed 2026-10-14**: ten wheel revolutions moved the M1 encoder from
+2072 to 29924, i.e. 27,852 counts, so 2785.2 per revolution. That is the
+99.5:1 gearbox (datasheet 2786.2), and the xacro's 2786 is correct. Re-measure
+with `scripts/measure_qppr.py` if the gearbox is ever changed.
+
+Derived: 9802 QPPS / 2786 = 3.52 rev/s = 211 RPM, about 17% above the 180 RPM
+datasheet figure, which is normal no-load at ~25 V. On the 0.04756 m wheels
+that is a 1.05 m/s ceiling, well above the 0.3 m/s controller cap.
 
 ## Outstanding before driving
 
@@ -141,4 +144,4 @@ From the 2026-10-06 log:
       per channel.
 - [ ] `serial_timeout_s: 0.0`. Set it now that tuning is done:
       `python3 scripts/serial_timeout.py --set 0.2`
-- [ ] Confirm `qppr` by hand and update the xacro.
+- [x] `qppr` confirmed by hand (2785.2); xacro value 2786 is correct.

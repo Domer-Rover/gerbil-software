@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 getPid_2.py
-Test, write, print and save the velocity + position PID of a RoboClaw 2x20A
-driving two goBILDA 5204 Yellow Jacket motors (M1, M2).
+Test, write, print and save the velocity + position PID of a RoboClaw 2x60A
+driving two goBILDA 5304 Saturn motors (99.5:1, M1 and M2).
 
 What a full run does:
   1. reads everything the board reports (PID, QPPS, encoders, voltages, ...)
@@ -37,10 +37,10 @@ PORT    = "/dev/ttyACM0"
 BAUD    = 38400
 ADDRESS = 0x80
 
-# Encoder counts per output-shaft revolution: 28 counts/motor rev x gear ratio.
-# 1993.6 = 71.2:1 (223 RPM). Only used to print RPM next to QPPS — change it to
-# match the ratio printed on your motors.
-COUNTS_PER_REV = 1993.6
+# Encoder counts per output-shaft revolution. Only used to print RPM next to
+# QPPS. 2786.2 = goBILDA 5304-8002-0100 (99.5:1), confirmed by hand on
+# 2026-10-14: 10 wheel turns measured 27,852 counts (2785.2/rev).
+COUNTS_PER_REV = 2786.2
 
 # Position limits: RoboClaw CLAMPS position targets to [min, max]. Wheels turn
 # continuously, so keep these wide.
