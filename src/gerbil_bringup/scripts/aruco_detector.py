@@ -34,10 +34,16 @@ class ArucoDetector(Node):
         dict_id = self.get_parameter('dictionary_id').value
         self.camera_frame = self.get_parameter('camera_frame').value
 
-        # ArUco setup
+        # ArUco setup. OpenCV renamed this API in 4.7: before that it is
+        # DetectorParameters_create() and detectMarkers(), after it is
+        # DetectorParameters() and an ArucoDetector object. The Jetson ships 4.5.
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(dict_id)
-        self.aruco_params = cv2.aruco.DetectorParameters()
-        self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        if hasattr(cv2.aruco, 'ArucoDetector'):
+            self.aruco_params = cv2.aruco.DetectorParameters()
+            self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        else:
+            self.aruco_params = cv2.aruco.DetectorParameters_create()
+            self.detector = None
 
         self.bridge = CvBridge()
         self.camera_matrix = None
@@ -78,7 +84,11 @@ class ArucoDetector(Node):
             return
 
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        corners, ids, _ = self.detector.detectMarkers(cv_image)
+        if self.detector is not None:
+            corners, ids, _ = self.detector.detectMarkers(cv_image)
+        else:
+            corners, ids, _ = cv2.aruco.detectMarkers(
+                cv_image, self.aruco_dict, parameters=self.aruco_params)
 
         pose_array = PoseArray()
         pose_array.header = msg.header
