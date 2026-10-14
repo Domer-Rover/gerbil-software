@@ -8,6 +8,9 @@
 # Install: sudo cp udev/99-gerbil.rules /etc/udev/rules.d/
 #          sudo udevadm control --reload-rules && sudo udevadm trigger
 # Check:   ls -l /dev/gerbil_*
-SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_ROBOCLAW", SYMLINK+="gerbil_roboclaw", GROUP="dialout", MODE="0660"
+# RoboClaw 2x60A over its own micro-USB (not a USB-serial adapter), confirmed
+# on the Jetson 2026-10-14. Note this ID has no per-unit serial number, so a
+# second RoboClaw on USB would also match.
+SUBSYSTEM=="tty", ENV{ID_SERIAL}=="Basicmicro_Inc._USB_Roboclaw_2x60A", SYMLINK+="gerbil_roboclaw", GROUP="dialout", MODE="0660"
 SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_LIDAR", SYMLINK+="gerbil_lidar", GROUP="dialout", MODE="0660"
 SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_GPS", SYMLINK+="gerbil_gps", GROUP="dialout", MODE="0660"
