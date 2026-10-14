@@ -2,7 +2,6 @@
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -83,20 +82,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ArUco marker detection (OpenCV, DICT_6X6_250)
-    # needs ZED images; skip it when the camera is off
-    aruco_detector = Node(
-        condition=IfCondition(LaunchConfiguration('launch_zed')),
-        package='gerbil_bringup',
-        executable='aruco_detector.py',
-        name='aruco_detector',
-        output='screen',
-        parameters=[{
-            'marker_size': 0.15,
-            'dictionary_id': 10,
-            'camera_frame': 'zed_left_camera_optical_frame',
-        }],
-    )
 
     return LaunchDescription([
         use_mock_hardware_arg,
@@ -108,5 +93,4 @@ def generate_launch_description():
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,
-        aruco_detector,
     ])
