@@ -21,3 +21,4 @@ venv/
 CLAUDE.md
 RESUME_SESSION.md
 jetson_maxpower.service
+scripts/pid_logs/roboclaw_latest.json
