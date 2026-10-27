@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container: ros:humble-ros-base
+    defaults:
+      run:
+        shell: bash
+    env:
+      # The ZED wrapper needs the ZED SDK + CUDA, which GitHub runners do not have.
+      ZED_PKGS: zed_components zed_wrapper zed_ros2 zed_debug
+      # Third-party code: built so breakage is caught, but not linted/tested
+      SKIP_TEST_PKGS: ldlidar_stl_ros2
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache rosdep index
+        uses: actions/cache@v4
+        with:
+          path: ~/.ros/rosdep
+          key: rosdep-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: rosdep-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y liburdfdom-tools python3-yaml
+          rosdep update --rosdistro humble
+          # Only our packages; the zed_* paths would pull in the ZED SDK.
+          rosdep install -y --rosdistro humble --ignore-src \
+            --from-paths src/gerbil_bringup src/gerbil_description src/gerbil_hw \
+                         src/imu_package src/vendors/roboclaw_serial src/vendors/ldlidar_stl_ros2
+
+      - name: Build
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-ignore $ZED_PKGS \
+            --event-handlers console_cohesion+ \
+            --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Check URDF
+        run: |
+          source install/setup.bash
+          urdf=src/gerbil_description/urdf/gerbil.urdf.xacro
+          for mock in true false; do
+            echo "::group::use_mock_hardware:=$mock"
+            xacro "$urdf" use_mock_hardware:=$mock > /tmp/gerbil_$mock.urdf
+            check_urdf /tmp/gerbil_$mock.urdf
+            # gerbil.launch.xml passes robot_description through YAML parsing, so
+            # text like 'TODO: x' in a comment breaks the launch (see de8e829).
+            python3 -c "import sys, yaml; v = yaml.safe_load(open(sys.argv[1])); assert isinstance(v, str), 'robot_description does not parse as a plain YAML string'" /tmp/gerbil_$mock.urdf
+            echo "::endgroup::"
+          done
+
+      - name: Check wheel parameters match
+        run: python3 .github/scripts/check_wheel_params.py
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile src/gerbil_bringup/launch/*.py scripts/*.py
+
+      - name: Test
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon test --packages-ignore $ZED_PKGS $SKIP_TEST_PKGS \
+            --event-handlers console_cohesion+
+          colcon test-result --verbose
+
+      - name: Upload logs and test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colcon-logs
+          path: |
+            log/
+            build/*/test_results/
+          if-no-files-found: ignore
