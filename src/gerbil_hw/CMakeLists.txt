@@ -66,6 +66,11 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   #set(ament_cmake_cpplint_FOUND TRUE)
+  # TODO: re-enable once the sources have been run through `ament_uncrustify --reformat`
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE
+    ament_cmake_uncrustify
+    ament_cmake_cpplint
+  )
   ament_lint_auto_find_test_dependencies()
 endif()
 

@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/Domer-Rover/gerbil-software/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/Software%20Lead-Brandon%20Martinez-C1E1C1" alt="Software Lead">
-  <img src="https://img.shields.io/badge/CI-In%20Progress-yellow" alt="CI Status">
+  <a href="https://github.com/Domer-Rover/gerbil-software/actions/workflows/ci.yml"><img src="https://github.com/Domer-Rover/gerbil-software/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status"></a>
 </p>
 
 <p align="center">
