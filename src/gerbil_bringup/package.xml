@@ -3,24 +3,45 @@
 <package format="3">
   <name>gerbil_bringup</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="domerrover@todo.todo">domerrover</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Launch files, Nav2/SLAM/controller configs, and maps for the Gerbil testbed</description>
+  <maintainer email="brandonprvbox@gmail.com">Brandon Martinez</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <exec_depend>gerbil_description</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>joy</exec_depend>
   <exec_depend>teleop_twist_joy</exec_depend>
   <exec_depend>teleop_twist_keyboard</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
-  <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>controller_manager</exec_depend>
-  <exec_depend>diff_drive_controller</exec_depend>
-  <exec_depend>joint_state_broadcaster</exec_depend>
-  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>rviz2</exec_depend>
   <exec_depend>laser_filters</exec_depend>
+  <exec_depend>ldlidar_stl_ros2</exec_depend>
   <exec_depend>ublox_gps</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <!-- Nav2 nodes launched by gerbil_nav2.launch.py -->
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <!-- Nav2 plugins selected in config/nav2_params.yaml -->
+  <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>nav2_smac_planner</exec_depend>
+  <!-- scripts/aruco_detector.py (not in any launch file) -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
