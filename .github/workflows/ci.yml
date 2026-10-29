@@ -43,6 +43,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The container runs as a different uid than the checkout owner, so git
+      # refuses to read the repo ("detected dubious ownership") and any git
+      # command silently returns nothing.
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Cache rosdep index
         uses: actions/cache@v4
         with:
@@ -96,8 +102,23 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          # Every first-party Python file; vendored code is not ours to lint
-          python3 -m py_compile $(git ls-files '*.py' | grep -v '^src/vendors/')
+          # Every first-party Python file; vendored code is not ours to lint,
+          # and build/install/log hold generated copies of our own files.
+          find . -name '*.py' \
+            -not -path './src/vendors/*' \
+            -not -path './build/*' \
+            -not -path './install/*' \
+            -not -path './log/*' \
+            -not -path './.git/*' | sort > py_files.txt
+          cat py_files.txt
+          count=$(wc -l < py_files.txt)
+          echo "checking $count Python files"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::found no Python files to check"
+            exit 1
+          fi
+          xargs python3 -m py_compile < py_files.txt
+          rm py_files.txt
 
       - name: Test
         run: |
