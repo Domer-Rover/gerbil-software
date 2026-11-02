@@ -14,7 +14,11 @@
 
 #include "roboclaw_hardware_interface/roboclaw_hardware_interface.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
+#include <string>
+
 #include <roboclaw_serial/device.hpp>
 
 namespace roboclaw_hardware_interface
@@ -22,6 +26,10 @@ namespace roboclaw_hardware_interface
 
 CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_info)
 {
+  if (SystemInterface::on_init(hardware_info) != CallbackReturn::SUCCESS) {
+    return CallbackReturn::ERROR;
+  }
+
   // Validate serial port parameter
   std::string serial_port;
   try {
@@ -35,6 +43,15 @@ CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_
   try {
     // Read the serial port from hardware parameters
     auto device = std::make_shared<roboclaw_serial::SerialDevice>(serial_port);
+
+    // connect() reports failure through its return value rather than throwing,
+    // so an unopened port would otherwise be reported as a successful init and
+    // every subsequent transaction would fail against a closed descriptor.
+    if (!device->connected()) {
+      std::cerr << "Failed to connect to RoboClaw serial port: " << serial_port << std::endl;
+      return CallbackReturn::ERROR;
+    }
+
     interface_ = std::make_shared<roboclaw_serial::Interface>(device);
   } catch (const std::exception & e) {
     std::cerr << e.what() << std::endl;
@@ -45,7 +62,11 @@ CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_
   bool use_duty_cycle = false;
   auto duty_it = hardware_info.hardware_parameters.find("use_duty_cycle");
   if (duty_it != hardware_info.hardware_parameters.end()) {
-    use_duty_cycle = (duty_it->second == "true" || duty_it->second == "1");
+    std::string duty_value = duty_it->second;
+    std::transform(
+      duty_value.begin(), duty_value.end(), duty_value.begin(),
+      [](unsigned char c) {return std::tolower(c);});
+    use_duty_cycle = (duty_value == "true" || duty_value == "1");
   }
   if (use_duty_cycle) {
     std::cerr << "[RoboClawHW] Duty cycle mode enabled (no encoders required)" << std::endl;
@@ -69,10 +90,20 @@ CallbackReturn RoboClawHardwareInterface::on_init(const HardwareInfo & hardware_
   return CallbackReturn::SUCCESS;
 }
 
+CallbackReturn RoboClawHardwareInterface::on_deactivate(const rclcpp_lifecycle::State &)
+{
+  // Closing the serial port does not stop the motors: the RoboClaws hold the
+  // last commanded duty cycle until their own packet serial timeout expires.
+  for (auto & roboclaw : roboclaw_units_) {
+    roboclaw.stop();
+  }
+  return CallbackReturn::SUCCESS;
+}
+
 std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
 {
   std::vector<StateInterface> state_interfaces;
-  for (auto roboclaw : roboclaw_units_) {
+  for (auto & roboclaw : roboclaw_units_) {
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
@@ -85,7 +116,7 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
 std::vector<CommandInterface> RoboClawHardwareInterface::export_command_interfaces()
 {
   std::vector<CommandInterface> command_interfaces;
-  for (auto roboclaw : roboclaw_units_) {
+  for (auto & roboclaw : roboclaw_units_) {
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         command_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityCommandPtr());
@@ -134,20 +165,24 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     }
 
     // Capture and validate parameters
-    uint8_t roboclaw_address;
-    try {
-      roboclaw_address = static_cast<uint8_t>(stoi(joint.parameters.at("address")));
-
-      if (roboclaw_address < 0x80 || roboclaw_address > 0x87) {
-        throw std::runtime_error(joint.name + ": Addresses must be in the range [128:136]");
-      }
-    } catch (const std::invalid_argument & e) {
-      std::cerr << e.what() << std::endl;
-      throw std::runtime_error(joint.name + ": Address must be an integer.");
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << std::endl;
-      throw std::runtime_error("Problem looking up address and converting to uint8_t");
+    auto address_it = joint.parameters.find("address");
+    if (address_it == joint.parameters.end()) {
+      throw std::runtime_error("Address is not set for " + joint.name);
     }
+
+    // Range check before narrowing, otherwise an out-of-range address would
+    // silently wrap into the valid range (e.g. 384 -> 128)
+    int address_value;
+    try {
+      address_value = std::stoi(address_it->second);
+    } catch (const std::exception &) {
+      throw std::runtime_error(joint.name + ": Address must be an integer.");
+    }
+
+    if (address_value < 0x80 || address_value > 0x87) {
+      throw std::runtime_error(joint.name + ": Addresses must be in the range [128:135]");
+    }
+    const uint8_t roboclaw_address = static_cast<uint8_t>(address_value);
 
     // Get the tick count per wheel rotation value
     int qppr;
@@ -157,6 +192,11 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
       throw std::runtime_error("qppr is not set for " + joint.name);
     } catch (const std::invalid_argument &) {
       throw std::runtime_error("qppr is not numeric for " + joint.name);
+    }
+
+    // Divisor when converting encoder counts to radians
+    if (qppr <= 0) {
+      throw std::runtime_error("qppr must be positive for " + joint.name);
     }
 
     // Get the type of motor from joint parameters
@@ -184,7 +224,16 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
     double max_duty_speed = 20.0;
     auto mds_it = joint.parameters.find("max_duty_speed");
     if (mds_it != joint.parameters.end()) {
-      max_duty_speed = std::stod(mds_it->second);
+      try {
+        max_duty_speed = std::stod(mds_it->second);
+      } catch (const std::exception &) {
+        throw std::runtime_error("max_duty_speed is not numeric for " + joint.name);
+      }
+
+      // Divisor for the duty cycle scale factor
+      if (max_duty_speed <= 0.0) {
+        throw std::runtime_error("max_duty_speed must be positive for " + joint.name);
+      }
     }
 
     // Ensure that this motor has not already been configured
@@ -194,7 +243,9 @@ RoboClawConfiguration RoboClawHardwareInterface::parse_roboclaw_configuration(
         std::make_shared<MotorJoint>(joint.name, qppr, max_duty_speed);
     } else {
       throw std::runtime_error(
-              "Bad motor type " + motor_type + " specified for joint " + joint.name);
+              joint.name + " and " + roboclaw_config[roboclaw_address][motor_type]->name +
+              " are both assigned to " + motor_type + " on address " +
+              std::to_string(address_value) + ". Each motor may only be claimed by one joint.");
     }
   }
 

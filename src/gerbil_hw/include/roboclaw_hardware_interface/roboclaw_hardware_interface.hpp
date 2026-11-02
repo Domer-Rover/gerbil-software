@@ -22,6 +22,7 @@
 #include <roboclaw_serial/interface.hpp>
 
 #include "hardware_interface/system_interface.hpp"
+#include "rclcpp_lifecycle/state.hpp"
 #include "roboclaw_hardware_interface/motor_joint.hpp"
 #include "roboclaw_hardware_interface/roboclaw_unit.hpp"
 
@@ -58,6 +59,13 @@ public:
      * \returns CallbackReturn::ERROR if any error happens or data are missing.
      */
   CallbackReturn on_init(const HardwareInfo & hardware_info) override;
+
+  /// Stop all motors when the hardware is deactivated.
+  /**
+     * \param[in] previous_state the lifecycle state being transitioned from.
+     * \returns CallbackReturn::SUCCESS
+     */
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
 
   /// Exports all state interfaces for this hardware interface.
   /**
