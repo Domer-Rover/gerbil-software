@@ -18,13 +18,16 @@ def test_remote_path_keeps_tilde_expandable():
 def test_ssh_argv_wraps_script_in_one_bash_argument():
     argv = remote.ssh_argv(CONN, "echo 'hi' && ls", multiplex=False)
     assert argv[:5] == ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5']
-    assert argv[5] == 'gerbil'
-    assert shlex.split(argv[6]) == ['bash', '-c', "echo 'hi' && ls"]
+    assert argv[-2] == 'gerbil'
+    assert shlex.split(argv[-1]) == ['bash', '-c', "echo 'hi' && ls"]
 
 
 def test_ssh_argv_options():
     shared = remote.ssh_argv(CONN, 'true', multiplex=True)
     assert 'ControlMaster=auto' in shared and 'ControlPersist=120' in shared
+    # Keepalives on every call, so a dead link ends ssh in seconds
+    for argv in (shared, remote.ssh_argv(CONN, 'true', multiplex=False)):
+        assert 'ServerAliveInterval=2' in argv and 'ServerAliveCountMax=3' in argv
     # A forced pty, so killing a local tail also ends the remote one
     streamed = remote.ssh_argv(CONN, 'true', tty=True, multiplex=False)
     assert '-tt' in streamed and streamed.index('-tt') < streamed.index('gerbil')
@@ -34,6 +37,10 @@ def test_session_names():
     assert remote.mission_session('equipment_servicing') == 'mission_equipment_servicing'
     assert remote.dev_session('gerbil_nav2.launch.py') == 'dev_gerbil_nav2'
     assert remote.dev_session('display.launch.xml') == 'dev_display'
+    # Dots in the stem stay distinct from the file without them
+    assert remote.dev_session('nav2.sim.launch.py') == 'dev_nav2_sim'
+    assert remote.dev_session('nav2.launch.py') == 'dev_nav2'
+    assert remote.dev_session('bringup.py') == 'dev_bringup'
     assert remote.session_name('dev_', 'a.b:c') == 'dev_a_b_c'
 
 
@@ -108,13 +115,15 @@ def test_stop_sessions_script():
 
 
 def test_checks_round_trip():
-    script = remote.checks_script(CONN, ['/scan', '/fix'])
-    assert 'ros2 topic echo --once "$1"' in script
-    # Retried until the deadline, since Humble's echo gives up on a topic
-    # discovery has not seen yet
-    assert 'while [ "$SECONDS" -lt "$deadline" ]' in script
-    assert 'check /scan &' in script and 'check /fix &' in script
-    assert script.rstrip().endswith('wait')
+    script = remote.checks_script(CONN, ['/scan', '/fix'], timeout=15)
+    # One python process for every topic, the program fed on stdin
+    assert "python3 - 15 /scan /fix <<'MISSION_LAUNCHER_CHECK'" in script
+    assert remote.CHECK_PROGRAM in script
+    assert script.rstrip().endswith('MISSION_LAUNCHER_CHECK')
+    # Raw (no image deserialization), and subscribes only once discovered
+    assert 'raw=True' in remote.CHECK_PROGRAM
+    assert 'get_topic_names_and_types' in remote.CHECK_PROGRAM
+    compile(remote.CHECK_PROGRAM, 'check_program', 'exec')
     out = 'OK /scan\nsome warning\nFAIL /fix\n'
     assert remote.parse_checks(out) == {'/scan': True, '/fix': False}
 

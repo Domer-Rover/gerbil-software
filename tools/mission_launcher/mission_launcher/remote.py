@@ -39,6 +39,12 @@ MULTIPLEX = not sys.platform.startswith('win')
 MULTIPLEX_OPTIONS = ['-o', 'ControlMaster=auto', '-o', 'ControlPath=~/.ssh/cm-%C',
                      '-o', 'ControlPersist=120']
 
+# A link that dies mid-command would otherwise leave ssh hanging until TCP
+# gives up (minutes), freezing the status poll on its last state. Three
+# missed 2 s keepalives (~6 s) end it instead. Also covers a mux master whose
+# connection went half-open.
+KEEPALIVE_OPTIONS = ['-o', 'ServerAliveInterval=2', '-o', 'ServerAliveCountMax=3']
+
 
 @dataclass
 class Connection:
@@ -72,7 +78,7 @@ def ssh_argv(conn: Connection, script: str, tty: bool = False,
     client, sshd hangs up the pty and the remote process gets SIGHUP.
     Without one, an idle `tail -F` never notices and stays on the rover.
     """
-    argv = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5']
+    argv = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5'] + KEEPALIVE_OPTIONS
     if multiplex:
         argv += MULTIPLEX_OPTIONS
     if tty:
@@ -93,7 +99,8 @@ def mission_session(mission_id: str) -> str:
 
 
 def dev_session(launch_file: str) -> str:
-    stem = launch_file.split('.launch')[0].rsplit('.', 1)[0]
+    # Strip only the extension: nav2.sim.launch.py -> nav2.sim, not nav2
+    stem = re.sub(r'(\.launch)?\.(py|xml|yaml)$', '', launch_file)
     return session_name(DEV_PREFIX, stem)
 
 
@@ -259,32 +266,49 @@ CHECK_OK = 'OK'
 CHECK_FAIL = 'FAIL'
 
 
+# One rclpy node that subscribes to every checked topic, instead of one
+# `ros2 topic echo` process per topic: a single DDS participant on the Jetson
+# while the mission is still starting up. Subscriptions are created as
+# discovery finds each topic (Humble cannot subscribe to an unknown type) and
+# are raw, so a compressed image is never deserialized. Best effort receives
+# from both reliable and best-effort publishers.
+CHECK_PROGRAM = '''\
+import sys, time
+import rclpy
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rosidl_runtime_py.utilities import get_message
+
+timeout, topics = float(sys.argv[1]), sys.argv[2:]
+rclpy.init()
+node = rclpy.create_node('mission_launcher_check')
+qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+got, subs = set(), {}
+deadline = time.monotonic() + timeout
+while time.monotonic() < deadline and len(got) < len(topics):
+    types = dict(node.get_topic_names_and_types())
+    for t in topics:
+        if t not in subs and types.get(t):
+            subs[t] = node.create_subscription(
+                get_message(types[t][0]), t, lambda _m, t=t: got.add(t), qos, raw=True)
+    rclpy.spin_once(node, timeout_sec=0.2)
+for t in topics:
+    print(('OK ' if t in got else 'FAIL ') + t)
+'''
+
+
 def checks_script(conn: Connection, topics: Iterable[str],
                   timeout: float = 15.0) -> str:
-    """Wait for one message on each topic, in parallel.
-
-    On Humble, `ros2 topic echo` exits at once with "could not determine the
-    type" if discovery has not seen the topic yet, so each echo is retried
-    until `timeout` runs out rather than tried once.
+    """Wait up to `timeout` for one message on each topic.
 
     Prints one 'OK <topic>' or 'FAIL <topic>' line per topic.
     """
-    lines = [
-        ros_env_script(conn) + ' || exit 1',
-        f'deadline=$((SECONDS + {int(timeout)}))',
-        'check() {',
-        '  while [ "$SECONDS" -lt "$deadline" ]; do',
-        '    left=$((deadline - SECONDS))',
-        '    timeout "$left" ros2 topic echo --once "$1" > /dev/null 2>&1'
-        f' && {{ echo "{CHECK_OK} $1"; return; }}',
-        '    sleep 1',
-        '  done',
-        f'  echo "{CHECK_FAIL} $1"',
-        '}',
-    ]
-    lines += [f'check {shlex.quote(topic)} &' for topic in topics]
-    lines.append('wait')
-    return '\n'.join(lines)
+    args = ' '.join(shlex.quote(t) for t in topics)
+    return (
+        f'{ros_env_script(conn)} || exit 1\n'
+        f"python3 - {timeout:g} {args} <<'MISSION_LAUNCHER_CHECK'\n"
+        f'{CHECK_PROGRAM}'
+        'MISSION_LAUNCHER_CHECK\n'
+    )
 
 
 def parse_checks(output: str) -> Dict[str, bool]:

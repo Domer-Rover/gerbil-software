@@ -33,6 +33,9 @@ STATUS_INTERVAL_MS = 3000
 PING_INTERVAL_MS = 2000
 CHECK_DELAY_MS = 20000          # let the ZED and EKF come up before checking
 UNREACHABLE_AFTER = 2           # consecutive failed polls before "unreachable"
+COMMAND_TIMEOUT_MS = 45000      # stop waits up to 15 s on the rover, plus margin
+SLOW_COMMAND_TIMEOUT_MS = 120000    # git pull over a weak link
+RECONNECT_LOG_LINES = 500       # history reloaded when a dropped log stream returns
 LOG_MAX_LINES = 5000
 
 # Health lights for a dev launch that is not one of the missions
@@ -242,9 +245,13 @@ class MainWindow(QMainWindow):
         self.tailing: Dict[str, str] = {}     # 'launch'/'build' -> run id
         self.dev_launches: Dict[str, str] = {}   # dev session -> launch file
         self.check_timer = QTimer(self, singleShot=True, timeout=self.run_checks)
+        self.check_gen = 0              # bumped per launch; stale results are dropped
+        self.check_running = False
         self.fox_sock = QTcpSocket(self)
         self.fox_sock.connected.connect(lambda: self.on_foxglove_result(True))
-        self.fox_sock.errorOccurred.connect(lambda _e: self.on_foxglove_result(False))
+        # errorOccurred is Qt 5.15+; Ubuntu 20.04's apt PyQt5 only has error
+        error_signal = getattr(self.fox_sock, 'errorOccurred', None) or self.fox_sock.error
+        error_signal.connect(lambda _e: self.on_foxglove_result(False))
 
         self._build_ui()
         self.resolve_host()
@@ -410,17 +417,33 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------ process plumbing
 
     def run(self, argv: List[str], on_done: Optional[Callable[[int, str], None]] = None,
-            echo: bool = False) -> QProcess:
-        """Run argv; on_done(exit_code, output). exit_code -1 = failed to start."""
+            echo: bool = False, timeout_ms: int = COMMAND_TIMEOUT_MS) -> QProcess:
+        """Run argv; on_done(exit_code, output). exit_code -1 = failed to start.
+
+        A command still running after timeout_ms is killed and reported as a
+        failure. SSH keepalives already end a dead link in ~6 s; this is the
+        backstop for anything else that hangs.
+        """
         proc = QProcess(self)
         proc.setProcessChannelMode(QProcess.MergedChannels)
         self.procs.add(proc)
-        done = {'called': False}
+        done = {'called': False, 'timed_out': False}
+        watchdog = QTimer(proc, singleShot=True)
+
+        def expire():
+            done['timed_out'] = True
+            proc.kill()
+
+        watchdog.timeout.connect(expire)
 
         def finish(code: int, output: str):
             if done['called']:
                 return
             done['called'] = True
+            watchdog.stop()
+            if done['timed_out']:
+                code = code or 1
+                output += f'\n[timed out after {timeout_ms // 1000} s]\n'
             self.procs.discard(proc)
             if echo and output.strip():
                 self.output_log.append_text(output if output.endswith('\n') else output + '\n')
@@ -433,12 +456,14 @@ class MainWindow(QMainWindow):
         proc.errorOccurred.connect(lambda err: err == QProcess.FailedToStart and finish(
             -1, f'could not run {argv[0]}: {proc.errorString()}\n'))
         proc.start(argv[0], argv[1:])
+        watchdog.start(timeout_ms)
         return proc
 
-    def ssh(self, script: str, on_done=None, echo: bool = True, label: str = ''):
+    def ssh(self, script: str, on_done=None, echo: bool = True, label: str = '',
+            timeout_ms: int = COMMAND_TIMEOUT_MS):
         if echo and label:
             self.output_log.append_text(f'$ {label}\n')
-        return self.run(remote.ssh_argv(self.conn(), script), on_done, echo)
+        return self.run(remote.ssh_argv(self.conn(), script), on_done, echo, timeout_ms)
 
     def conn(self) -> remote.Connection:
         return self.settings.connection()
@@ -515,6 +540,9 @@ class MainWindow(QMainWindow):
         # Compared by run id, so a restart of the same session is a new run
         if active and self.tailing.get('launch') != self.sessions[active]:
             self.on_launch_detected(active)
+        elif active and self.reachable and not tail_alive(self.launch_tail):
+            # Same run, but the stream died with the link: reload recent history
+            self.launch_tail = self.reconnect_tail(self.launch_tail, active, self.launch_log)
         build_run = self.sessions.get(remote.BUILD_SESSION)
         if build_run and self.tailing.get('build') != build_run:
             self.tailing['build'] = build_run
@@ -522,6 +550,9 @@ class MainWindow(QMainWindow):
             self.logs.setCurrentWidget(self.build_log)
             self.build_tail = self.restart_tail(self.build_tail, remote.BUILD_SESSION,
                                                 self.build_log)
+        elif build_run and self.reachable and not tail_alive(self.build_tail):
+            self.build_tail = self.reconnect_tail(self.build_tail, remote.BUILD_SESSION,
+                                                  self.build_log)
 
     def on_launch_detected(self, session: str):
         """A launch started, by us or anyone: follow its log and checks."""
@@ -529,15 +560,27 @@ class MainWindow(QMainWindow):
         self.launch_log.clear()
         self.launch_tail = self.restart_tail(self.launch_tail, session, self.launch_log)
         self.logs.setCurrentWidget(self.launch_log)
+        # A check still in flight belongs to the previous launch: drop it
+        self.check_gen += 1
+        self.check_running = False
+        self.check_btn.setEnabled(True)
         self.set_health_topics(self.checks_for(session))
         self.check_timer.start(CHECK_DELAY_MS)
 
-    def restart_tail(self, old: Optional[QProcess], session: str, view: LogView):
+    def restart_tail(self, old: Optional[QProcess], session: str, view: LogView,
+                     lines: int = 200):
         # The previous tail keeps running until a new session starts, so the
         # shutdown lines of a stopped launch still reach the log pane.
         if old is not None:
             old.kill()
-        return self.stream(remote.tail_log_script(self.conn(), session), view)
+            old.deleteLater()
+        return self.stream(remote.tail_log_script(self.conn(), session, lines), view)
+
+    def reconnect_tail(self, old: Optional[QProcess], session: str, view: LogView):
+        view.clear()
+        view.append_text(f'[mission_launcher] log stream reconnected; '
+                         f'last {RECONNECT_LOG_LINES} lines:\n')
+        return self.restart_tail(old, session, view, RECONNECT_LOG_LINES)
 
     # ------------------------------------------------------------ network
 
@@ -638,14 +681,21 @@ class MainWindow(QMainWindow):
         if not active:
             self.output_log.append_text('nothing running to check\n')
             return
+        if self.check_running:
+            return          # the timer and the button can both ask; one at a time
         checks = self.checks_for(active)
         if list(self.health_lights) != list(checks):
             self.set_health_topics(checks)
         for topic, light in self.health_lights.items():
             light.set(AMBER, f'{checks[topic]} (checking)')
+        self.check_running = True
         self.check_btn.setEnabled(False)
+        gen = self.check_gen
 
         def done(_code, output):
+            if gen != self.check_gen:
+                return      # a new launch replaced these lights meanwhile
+            self.check_running = False
             self.check_btn.setEnabled(True)
             results = remote.parse_checks(output)
             for topic, light in self.health_lights.items():
@@ -830,7 +880,8 @@ class MainWindow(QMainWindow):
 
     def run_git(self, action: str):
         self.logs.setCurrentWidget(self.output_log)
-        self.ssh(remote.git_script(self.conn(), action), label=f'git {action}')
+        self.ssh(remote.git_script(self.conn(), action), label=f'git {action}',
+                 timeout_ms=SLOW_COMMAND_TIMEOUT_MS)
 
     def start_build(self):
         if self.active_launch():
@@ -861,11 +912,25 @@ class MainWindow(QMainWindow):
 
     def edit_settings(self):
         if SettingsDialog(self.settings, self).exec_():
+            # Nothing from the previous rover or workspace may carry over: its
+            # file list and argument form would otherwise still count as loaded
             self.reachable = None
+            self.poll_failures = 0
+            self.sessions = {}
             self.tailing.clear()
+            self.dev_launches.clear()
+            for proc in (self.launch_tail, self.build_tail):
+                if proc is not None:
+                    proc.kill()
+            self.launch_combo.blockSignals(True)
+            self.launch_combo.clear()
+            self.launch_combo.blockSignals(False)
+            self.load_launch_args('')       # clears the form and dev_args_for
+            # Ping the new host right away; ssh -G refines it when it returns
+            self.hostname = remote.parse_resolved_host('', self.settings.get('host'))
             self.resolve_host()
             self.update_host_label()
-            self.poll_status()
+            self.poll_status()              # refetches the launch files once reachable
 
     def closeEvent(self, event):
         # Closing the GUI never stops anything on the rover
@@ -873,6 +938,10 @@ class MainWindow(QMainWindow):
             if proc is not None:
                 proc.kill()
         super().closeEvent(event)
+
+
+def tail_alive(proc: Optional[QProcess]) -> bool:
+    return proc is not None and proc.state() != QProcess.NotRunning
 
 
 def open_terminal(argv: List[str]) -> bool:
