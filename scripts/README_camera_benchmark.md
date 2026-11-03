@@ -62,17 +62,21 @@ change CPU/GPU clocks, power mode, cooling, or the set of background processes
 between profiles. If the robot is thermally throttling or RAM is nearly full,
 stop the run and note that rather than forcing the remaining profiles through.
 
-Options for a longer sample or a different image topic:
+By default, the script discovers the camera's RGB image topic from the live ROS
+graph. This supports the SDK 5 topic `/zed/zed_node/rgb/color/rect/image` and
+the SDK 4 topic `/zed/zed_node/rgb/image_rect_color`. If the driver creates
+image topics only when a subscriber requests them, the script falls back to
+the project's documented SDK 5 topic and subscribes directly. To specify a
+different topic or use a longer sample:
 
 ```bash
 python3 scripts/benchmark_camera_configs.py --duration 60 --startup 30
 python3 scripts/benchmark_camera_configs.py --topic /zed/zed_node/rgb/image_rect_color
 ```
 
-The default topic is `/zed/zed_node/rgb/color/rect/image` (the SDK 5 topic).
-Use the alternate topic only if that is the topic published by the installed
-ZED wrapper version. The script expects `ros2`, `tegrastats`, and the Python
-standard library to be available in the sourced environment.
+The selected topic is included in each CSV row. The script expects `ros2`,
+`tegrastats`, and the Python standard library to be available in the sourced
+environment.
 
 ## Results
 
@@ -96,6 +100,15 @@ connected. Compare the system-load columns across profiles under the same
 workload; do not pick a profile from resolution or FPS alone. A higher image
 rate than requested can indicate the topic measurement or launch did not use
 the expected settings; an empty rate means the selected topic was not observed.
+
+To make a readable Markdown summary from a CSV, run:
+
+```bash
+python3 scripts/read_camera_benchmark.py camera_benchmark/camera-benchmark-YYYYMMDD-HHMMSS.csv
+```
+
+The report is written next to the CSV with a `.md` extension. You can choose a
+different destination with `--output report.md`.
 
 The ten profiles are candidates, not a guarantee that every combination is
 sustainable on the Nano. Treat high sustained GPU/CPU use, rising RAM use,

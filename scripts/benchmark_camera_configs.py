@@ -86,7 +86,7 @@ def topic_rate(topic, seconds):
     if shutil.which("ros2") is None:
         return ""
     proc = subprocess.Popen(
-        ["ros2", "topic", "hz", topic, "--window", "20"],
+        ["ros2", "topic", "hz", topic, "--window", "5"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         start_new_session=True,
     )
@@ -108,6 +108,31 @@ def topic_rate(topic, seconds):
         if m:
             rates.append(float(m.group(1)))
     return round(statistics.mean(rates), 2) if rates else ""
+
+
+def resolve_image_topic(requested, camera_name):
+    """Find the ZED RGB image topic across the SDK 4 and SDK 5 topic layouts."""
+    if requested != "auto":
+        return requested
+    try:
+        result = subprocess.run(
+            ["ros2", "topic", "list"], capture_output=True, text=True,
+            timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    prefix = f"/{camera_name}/zed_node/"
+    topics = [line.strip() for line in result.stdout.splitlines()]
+    candidates = [
+        topic for topic in topics
+        if topic.startswith(prefix) and "/rgb/" in topic
+        and (topic.endswith("/image") or topic.endswith("/image_rect_color"))
+    ]
+    # Prefer SDK 5's rectified color image when both topic layouts are present.
+    candidates.sort(key=lambda topic: ("color/rect/image" not in topic, topic))
+    # Some ZED wrapper configurations create image publishers lazily. In that
+    # case ros2 topic list is empty until a subscriber asks for this topic.
+    return candidates[0] if candidates else f"{prefix}rgb/color/rect/image"
 
 
 def stop_process(proc):
@@ -133,8 +158,8 @@ def main():
                         help="steady-state measurement seconds per profile (default: 20)")
     parser.add_argument("--startup", type=int, default=20,
                         help="seconds to let the camera settle before measuring (default: 20)")
-    parser.add_argument("--topic", default="/zed/zed_node/rgb/color/rect/image",
-                        help="ROS image topic to measure (SDK 5 default)")
+    parser.add_argument("--topic", default="auto",
+                        help="ROS image topic to measure, or 'auto' to detect ZED SDK 4/5 RGB topic")
     parser.add_argument("--output", type=Path, default=Path("camera_benchmark"),
                         help="output directory for CSV and raw tegrastats logs")
     parser.add_argument("--camera-name", default="zed")
@@ -185,13 +210,17 @@ def main():
                 time.sleep(args.startup)
                 if launch.poll() is not None:
                     print(f"  launch exited early ({launch.returncode}); see {launch_log_path}")
-                print(f"  measuring load and {args.topic} rate for {args.duration}s", flush=True)
+                image_topic = resolve_image_topic(args.topic, args.camera_name)
+                if image_topic:
+                    print(f"  measuring load and {image_topic} rate for {args.duration}s", flush=True)
+                else:
+                    print("  no topic selected; recording load only", flush=True)
                 stats = subprocess.Popen(
                     ["tegrastats", "--interval", "1000", "--logfile", str(stats_path)],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
-                measured_rate = topic_rate(args.topic, args.duration)
+                measured_rate = topic_rate(image_topic, args.duration) if image_topic else ""
                 time.sleep(1.2)  # let tegrastats flush its last sample
             except KeyboardInterrupt:
                 print("\nInterrupted; stopping active processes.")
@@ -214,6 +243,7 @@ def main():
                 "pub_resolution": profile[3],
                 "downscale": profile[4],
                 "pub_fps": profile[5],
+                "image_topic": image_topic,
                 "measured_image_hz": measured_rate,
                 **read_tegrastats(stats_path),
                 "tegrastats_log": str(stats_path),
