@@ -1,0 +1,13 @@
+[INFO] [launch]: All log files can be found below /home/domerrover/.ros/log/2026-11-03-17-41-41-813488-gerbil-17688
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: Using common configuration file: /home/domerrover/gerbil-software/install/zed_wrapper/share/zed_wrapper/config/common_stereo.yaml
+[INFO] [launch.user]: Using camera configuration file: /home/domerrover/gerbil-software/install/zed_wrapper/share/zed_wrapper/config/zed2i.yaml
+[INFO] [launch.user]: Using Object Detection configuration file: /home/domerrover/gerbil-software/install/zed_wrapper/share/zed_wrapper/config/object_detection.yaml
+[INFO] [launch.user]: Using Custom Object Detection configuration file: /home/domerrover/gerbil-software/install/zed_wrapper/share/zed_wrapper/config/custom_object_detection.yaml
+[INFO] [launch.user]: Using ROS parameters override file: /tmp/zed-benchmark-e7xou_6h/vga15_native.yaml
+[INFO] [launch.user]: Loading ZED node `zed_node` in container `/zed/zed_container`
+[INFO] [component_container_isolated-1]: process started with pid [17706]
+[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/zed/zed_node' in container '/zed/zed_container'
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[component_container_isolated-1] [0m[INFO] [1793745743.419414108] [rclcpp]: signal_handler(signum=2)[0m
+[INFO] [component_container_isolated-1]: process has finished cleanly [pid 17706]

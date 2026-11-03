@@ -1,0 +1,11 @@
+name,grab_resolution,grab_fps,pub_resolution,downscale,pub_fps,measured_image_hz,samples,ram_mean_pct,ram_p95_pct,gpu_mean_pct,gpu_p95_pct,cpu_core_mean_pct,cpu_core_p95_pct,tegrastats_log,launch_log
+vga15_native,VGA,15,NATIVE,1.0,15,,21,30.0,30.5,0.0,0.0,18.9,99.0,camera_benchmark/20261103-172106-vga15_native-tegrastats.log,camera_benchmark/20261103-172106-vga15_native-launch.log
+vga30_native,VGA,30,NATIVE,1.0,30,,21,30.7,30.9,0.0,0.0,20.6,99.0,camera_benchmark/20261103-172106-vga30_native-tegrastats.log,camera_benchmark/20261103-172106-vga30_native-launch.log
+vga60_native,VGA,60,NATIVE,1.0,60,,21,31.3,31.8,0.0,0.0,19.2,99.0,camera_benchmark/20261103-172106-vga60_native-tegrastats.log,camera_benchmark/20261103-172106-vga60_native-launch.log
+720p15_native,HD720,15,NATIVE,1.0,15,,21,31.3,31.7,0.0,0.0,19.0,99.0,camera_benchmark/20261103-172106-720p15_native-tegrastats.log,camera_benchmark/20261103-172106-720p15_native-launch.log
+720p30_native,HD720,30,NATIVE,1.0,30,,21,31.3,31.7,0.0,0.0,18.8,99.0,camera_benchmark/20261103-172106-720p30_native-tegrastats.log,camera_benchmark/20261103-172106-720p30_native-launch.log
+720p30_half_15,HD720,30,CUSTOM,2.0,15,,21,31.6,31.9,0.0,0.0,28.2,99.0,camera_benchmark/20261103-172106-720p30_half_15-tegrastats.log,camera_benchmark/20261103-172106-720p30_half_15-launch.log
+720p30_half_30,HD720,30,CUSTOM,2.0,30,,16,44.1,45.6,0.0,0.0,26.7,99.0,camera_benchmark/20261103-172106-720p30_half_30-tegrastats.log,camera_benchmark/20261103-172106-720p30_half_30-launch.log
+1080p15_native,HD1080,15,NATIVE,1.0,15,,21,42.8,43.2,0.0,0.0,20.2,99.0,camera_benchmark/20261103-172106-1080p15_native-tegrastats.log,camera_benchmark/20261103-172106-1080p15_native-launch.log
+1080p30_native,HD1080,30,NATIVE,1.0,30,,21,42.9,43.4,0.0,0.0,20.0,99.0,camera_benchmark/20261103-172106-1080p30_native-tegrastats.log,camera_benchmark/20261103-172106-1080p30_native-launch.log
+1080p30_half_15,HD1080,30,CUSTOM,2.0,15,,21,42.2,43.0,0.0,0.0,20.0,99.0,camera_benchmark/20261103-172106-1080p30_half_15-tegrastats.log,camera_benchmark/20261103-172106-1080p30_half_15-launch.log
