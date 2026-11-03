@@ -41,6 +41,12 @@ def generate_launch_description():
         default_value='false',
     )
 
+    launch_imu_arg = DeclareLaunchArgument(
+        'launch_imu',
+        default_value='false',
+        description='Launch the BNO055 IMU (not fused by the EKF)'
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -65,6 +71,7 @@ def generate_launch_description():
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_gps': LaunchConfiguration('launch_gps'),
             'launch_lidar': LaunchConfiguration('launch_lidar'),
+            'launch_imu': LaunchConfiguration('launch_imu'),
         }.items()
     )
 
@@ -90,6 +97,7 @@ def generate_launch_description():
         use_joystick_arg,
         launch_lidar_arg,
         launch_gps_arg,
+        launch_imu_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,
