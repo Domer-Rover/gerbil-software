@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import shlex
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -26,6 +27,17 @@ BUILD_SESSION = 'build'
 
 # ros2_control and the ZED can take a while to shut down on Ctrl-C
 DEFAULT_STOP_TIMEOUT = 15.0
+
+# Serializes the "is anything running?" check with the tmux create, so two
+# laptops pressing Start together cannot both get through
+LOCK_FILE = '~/.ros/mission_launcher.lock'
+
+# Reuse one SSH connection for the 3 s status poll and every command, instead
+# of a full handshake each time over a weak field link. Windows' OpenSSH has
+# no connection multiplexing, so there each command still connects afresh.
+MULTIPLEX = not sys.platform.startswith('win')
+MULTIPLEX_OPTIONS = ['-o', 'ControlMaster=auto', '-o', 'ControlPath=~/.ssh/cm-%C',
+                     '-o', 'ControlPersist=120']
 
 
 @dataclass
@@ -48,15 +60,23 @@ def remote_path(path: str) -> str:
     return shlex.quote(path)
 
 
-def ssh_argv(conn: Connection, script: str, tty: bool = False) -> List[str]:
+def ssh_argv(conn: Connection, script: str, tty: bool = False,
+             multiplex: bool = MULTIPLEX) -> List[str]:
     """Local argv that runs a bash script on the rover.
 
     BatchMode makes ssh fail instead of prompting for a password the GUI
     cannot answer; key-based login is required.
+
+    tty forces a remote pseudo-terminal (-tt, since the GUI has no local
+    one). Use it for long-running commands: when the GUI kills its ssh
+    client, sshd hangs up the pty and the remote process gets SIGHUP.
+    Without one, an idle `tail -F` never notices and stays on the rover.
     """
     argv = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5']
+    if multiplex:
+        argv += MULTIPLEX_OPTIONS
     if tty:
-        argv.append('-t')
+        argv.append('-tt')
     argv += [conn.host, 'bash -c ' + shlex.quote(script)]
     return argv
 
@@ -85,14 +105,23 @@ def is_launcher_session(name: str) -> bool:
     return is_launch_session(name) or name == BUILD_SESSION
 
 
-def parse_sessions(output: str) -> List[str]:
-    """Launcher-owned sessions out of `tmux ls -F '#S'`."""
-    return [s.strip() for s in output.splitlines() if is_launcher_session(s.strip())]
+def parse_sessions(output: str) -> Dict[str, str]:
+    """Launcher-owned sessions out of list_sessions_script(): name -> run id.
+
+    The run id is the session's creation time, so stopping and restarting
+    the same mission between two polls still reads as a new run.
+    """
+    sessions = {}
+    for line in output.splitlines():
+        name, _, created = line.strip().partition(' ')
+        if is_launcher_session(name):
+            sessions[name] = f'{name}@{created}'
+    return sessions
 
 
 def list_sessions_script() -> str:
     # No tmux server running means no sessions, not an error
-    return "tmux ls -F '#S' 2>/dev/null || true"
+    return "tmux ls -F '#S #{session_created}' 2>/dev/null || true"
 
 
 # ---------------------------------------------------------------- ros env
@@ -135,8 +164,11 @@ def start_session_script(conn: Connection, session: str, command: str,
                          now: Optional[datetime] = None) -> str:
     """Run `command` in a detached tmux session, teeing output to a log.
 
-    exclusive refuses to start while any mission_*/dev_* session runs. It is
-    checked on the rover, so two GUIs cannot both grab the RoboClaw.
+    exclusive refuses to start while any mission_*/dev_* session runs (they
+    all hold the RoboClaw) or a build does (it would load half-built files).
+    The check and the create run under one flock on the rover, so two GUIs
+    pressing Start together cannot both get through. The lock fd is closed
+    for tmux, or a tmux server started here would hold the lock forever.
 
     tee -i ignores the Ctrl-C that stop sends to the whole pane, so it keeps
     logging ros2 launch's shutdown instead of dying first and SIGPIPE-ing it.
@@ -149,20 +181,25 @@ def start_session_script(conn: Connection, session: str, command: str,
         f'{{ {command}; }} 2>&1 | tee -i -a {log_q}; '
         f'echo "[mission_launcher] exited with code ${{PIPESTATUS[0]}}" >> {log_q}'
     )
+    lock = remote_path(LOCK_FILE)
     guard = ''
     if exclusive:
         guard = (
-            f"busy=$(tmux ls -F '#S' 2>/dev/null | grep -Ex '{LAUNCH_SESSION_REGEX}'); "
+            "busy=$(tmux ls -F '#S' 2>/dev/null | "
+            f"grep -Ex '{LAUNCH_SESSION_REGEX}|{BUILD_SESSION}' | paste -sd ' '); "
             'if [ -n "$busy" ]; then '
-            'echo "refusing to start: $busy is already running" >&2; exit 1; fi; '
+            'echo "refusing to start: $busy already running" >&2; exit 1; fi; '
         )
     return (
-        guard +
+        f'mkdir -p "$(dirname {lock})" && exec 9>{lock} || exit 1; '
+        'if ! flock -w 10 9; then '
+        'echo "another start is in progress on the rover" >&2; exit 1; fi; '
+        + guard +
         f'if tmux has-session -t ={session} 2>/dev/null; then '
         f'echo "session {session} is already running" >&2; exit 1; fi; '
         f'mkdir -p {remote_path(conn.log_dir)} && '
         f'ln -sfn {log_q} {latest_q} && '
-        f'tmux new-session -d -s {session} bash -c {shlex.quote(inner)} && '
+        f'tmux new-session -d -s {session} bash -c {shlex.quote(inner)} 9>&- && '
         f'echo "started {session}, logging to {log}"'
     )
 
@@ -223,18 +260,29 @@ CHECK_FAIL = 'FAIL'
 
 
 def checks_script(conn: Connection, topics: Iterable[str],
-                  timeout: float = 8.0) -> str:
+                  timeout: float = 15.0) -> str:
     """Wait for one message on each topic, in parallel.
+
+    On Humble, `ros2 topic echo` exits at once with "could not determine the
+    type" if discovery has not seen the topic yet, so each echo is retried
+    until `timeout` runs out rather than tried once.
 
     Prints one 'OK <topic>' or 'FAIL <topic>' line per topic.
     """
-    lines = [ros_env_script(conn) + ' || exit 1']
-    for topic in topics:
-        t = shlex.quote(topic)
-        lines.append(
-            f'( timeout {timeout:g} ros2 topic echo --once {t} > /dev/null 2>&1 '
-            f'&& echo "{CHECK_OK} "{t} || echo "{CHECK_FAIL} "{t} ) &'
-        )
+    lines = [
+        ros_env_script(conn) + ' || exit 1',
+        f'deadline=$((SECONDS + {int(timeout)}))',
+        'check() {',
+        '  while [ "$SECONDS" -lt "$deadline" ]; do',
+        '    left=$((deadline - SECONDS))',
+        '    timeout "$left" ros2 topic echo --once "$1" > /dev/null 2>&1'
+        f' && {{ echo "{CHECK_OK} $1"; return; }}',
+        '    sleep 1',
+        '  done',
+        f'  echo "{CHECK_FAIL} $1"',
+        '}',
+    ]
+    lines += [f'check {shlex.quote(topic)} &' for topic in topics]
     lines.append('wait')
     return '\n'.join(lines)
 

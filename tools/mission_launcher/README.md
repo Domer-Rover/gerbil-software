@@ -47,8 +47,9 @@ Each card's toggles are the only arguments a mission exposes. Everything else
 is fixed in its `mission_<id>.launch.py`.
 
 - **Start** runs the mission in tmux session `mission_<id>`. Only one launch
-  can run at a time, because they all hold the RoboClaw serial port. The rover
-  enforces this, so two laptops cannot both start one.
+  can run at a time, because they all hold the RoboClaw serial port. Nothing
+  can launch while a `colcon build` runs either. The rover enforces both
+  rules under a lock, so two laptops pressing Start together cannot both win.
 - **Stop** sends Ctrl-C, waits up to 15 s for a clean shutdown, then kills the
   session. Ctrl-C comes first so that ros2_control stops the motors.
 - **STOP ALL** does the same for every launcher session.
@@ -67,7 +68,9 @@ The Dev tab is for working on the robot.
 
 - **Launch any file**: pick any launch file in `gerbil_bringup`. Its arguments
   are read with `ros2 launch --show-args` and shown as a form.
-  `use_mock_hardware` defaults to **on** here. Only values that differ from
+  `use_mock_hardware` defaults to **on** here. Start stays disabled until the
+  form has loaded, so a slow or failed read can never launch with the file's
+  own default (mock off). Only values that differ from
   the file's defaults are passed. Frequent setups can be saved as presets.
   The launch runs in session `dev_<name>`, under the same one-at-a-time lock.
 - **Workspace**: `git status`, `git pull --ff-only`, and `colcon build`
@@ -75,6 +78,14 @@ The Dev tab is for working on the robot.
   its own log tab.
 - **Attach** opens a local terminal attached to the tmux session. Detach with
   `Ctrl-b d`; pressing Ctrl-C in there stops the launch.
+
+## SSH traffic
+
+On Linux and macOS, every command reuses one SSH connection
+(`ControlMaster`, kept open for 2 minutes), so the 3-second status poll costs
+almost nothing on a weak link. Windows' OpenSSH can't share connections, so
+there each command connects afresh. On both, a single failed poll is ignored;
+the rover shows as unreachable only after two in a row.
 
 ## Logs
 

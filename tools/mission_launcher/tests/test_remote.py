@@ -16,10 +16,18 @@ def test_remote_path_keeps_tilde_expandable():
 
 
 def test_ssh_argv_wraps_script_in_one_bash_argument():
-    argv = remote.ssh_argv(CONN, "echo 'hi' && ls")
+    argv = remote.ssh_argv(CONN, "echo 'hi' && ls", multiplex=False)
     assert argv[:5] == ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5']
     assert argv[5] == 'gerbil'
     assert shlex.split(argv[6]) == ['bash', '-c', "echo 'hi' && ls"]
+
+
+def test_ssh_argv_options():
+    shared = remote.ssh_argv(CONN, 'true', multiplex=True)
+    assert 'ControlMaster=auto' in shared and 'ControlPersist=120' in shared
+    # A forced pty, so killing a local tail also ends the remote one
+    streamed = remote.ssh_argv(CONN, 'true', tty=True, multiplex=False)
+    assert '-tt' in streamed and streamed.index('-tt') < streamed.index('gerbil')
 
 
 def test_session_names():
@@ -30,8 +38,14 @@ def test_session_names():
 
 
 def test_parse_sessions_keeps_only_launcher_sessions():
-    out = 'rover\nmission_delivery\nbuild\ndev_gerbil_slam\nmy_build\n'
-    assert remote.parse_sessions(out) == ['mission_delivery', 'build', 'dev_gerbil_slam']
+    out = ('rover 1700000000\nmission_delivery 1700000100\nbuild 1700000200\n'
+           'dev_gerbil_slam 1700000300\nmy_build 1700000400\n')
+    sessions = remote.parse_sessions(out)
+    assert list(sessions) == ['mission_delivery', 'build', 'dev_gerbil_slam']
+    # A restart of the same session gets a new run id
+    assert sessions['mission_delivery'] == 'mission_delivery@1700000100'
+    again = remote.parse_sessions('mission_delivery 1700000999\n')
+    assert again['mission_delivery'] != sessions['mission_delivery']
     assert remote.is_launch_session('mission_delivery')
     assert not remote.is_launch_session('build')
 
@@ -56,12 +70,16 @@ def test_start_launch_script():
     script = remote.start_launch_script(
         CONN, 'mission_delivery', 'gerbil_bringup', 'mission_delivery.launch.py',
         {'use_mock_hardware': True}, now=NOW)
-    # Refuses while another launch holds the RoboClaw
-    assert "grep -Ex 'mission_.*|dev_.*'" in script
+    # Refuses while another launch holds the RoboClaw, or a build runs
+    assert "grep -Ex 'mission_.*|dev_.*|build'" in script
+    # ...with the check and the create under one lock, closed for tmux
+    assert script.index('flock -w 10 9') < script.index('busy=')
+    assert script.index('busy=') < script.index('tmux new-session')
+    assert '9>&- && echo "started' in script
     assert ('ln -sfn "$HOME"/.ros/mission_logs/mission_delivery-20261102-143005.log'
             in script)
     # The tmux command is one quoted argument to bash -c
-    tmux = script[script.index('tmux new-session'):].split(' && echo')[0]
+    tmux = script[script.index('tmux new-session'):].split(' 9>&-')[0]
     words = shlex.split(tmux)
     assert words[:7] == ['tmux', 'new-session', '-d', '-s', 'mission_delivery',
                          'bash', '-c']
@@ -91,7 +109,11 @@ def test_stop_sessions_script():
 
 def test_checks_round_trip():
     script = remote.checks_script(CONN, ['/scan', '/fix'])
-    assert 'ros2 topic echo --once /scan' in script
+    assert 'ros2 topic echo --once "$1"' in script
+    # Retried until the deadline, since Humble's echo gives up on a topic
+    # discovery has not seen yet
+    assert 'while [ "$SECONDS" -lt "$deadline" ]' in script
+    assert 'check /scan &' in script and 'check /fix &' in script
     assert script.rstrip().endswith('wait')
     out = 'OK /scan\nsome warning\nFAIL /fix\n'
     assert remote.parse_checks(out) == {'/scan': True, '/fix': False}

@@ -32,6 +32,7 @@ WINDOWS = sys.platform.startswith('win')
 STATUS_INTERVAL_MS = 3000
 PING_INTERVAL_MS = 2000
 CHECK_DELAY_MS = 20000          # let the ZED and EKF come up before checking
+UNREACHABLE_AFTER = 2           # consecutive failed polls before "unreachable"
 LOG_MAX_LINES = 5000
 
 # Health lights for a dev launch that is not one of the missions
@@ -231,14 +232,15 @@ class MainWindow(QMainWindow):
         self.resize(1200, 850)
 
         self.procs = set()               # keeps running QProcesses alive
-        self.sessions: List[str] = []
+        self.sessions: Dict[str, str] = {}    # session -> run id
         self.reachable: Optional[bool] = None
+        self.poll_failures = 0
         self.hostname = self.settings.get('host')
         self.status_busy = self.ping_busy = False
         self.launch_tail: Optional[QProcess] = None
         self.build_tail: Optional[QProcess] = None
-        self.tailing: Dict[str, str] = {}     # 'launch'/'build' -> session
-        self.check_results: Dict[str, Optional[bool]] = {}
+        self.tailing: Dict[str, str] = {}     # 'launch'/'build' -> run id
+        self.dev_launches: Dict[str, str] = {}   # dev session -> launch file
         self.check_timer = QTimer(self, singleShot=True, timeout=self.run_checks)
         self.fox_sock = QTcpSocket(self)
         self.fox_sock.connected.connect(lambda: self.on_foxglove_result(True))
@@ -357,7 +359,12 @@ class MainWindow(QMainWindow):
         self.args_form = QFormLayout(self.args_form_host)
         self.dev_arg_widgets: Dict[str, QWidget] = {}
         self.dev_arg_defaults: Dict[str, Optional[str]] = {}
-        self.pending_args: Optional[Dict[str, str]] = None
+        # The launch file whose arguments the form holds. Start stays off
+        # until they load, so an empty form never falls back to the file's
+        # own use_mock_hardware default (false = real motors).
+        self.dev_args_for: Optional[str] = None
+        # (launch file, values) from a preset, applied only to that file
+        self.pending_preset: Optional[tuple] = None
         lv.addWidget(self.args_form_host)
         lv.addStretch()
 
@@ -437,11 +444,13 @@ class MainWindow(QMainWindow):
         return self.settings.connection()
 
     def stream(self, script: str, view: LogView) -> QProcess:
+        # tty: killing this ssh then hangs up the remote side too, instead of
+        # leaving a `tail -F` behind on the rover
         proc = QProcess(self)
         proc.setProcessChannelMode(QProcess.MergedChannels)
         proc.readyRead.connect(lambda: view.append_text(
             bytes(proc.readAll()).decode('utf-8', 'replace')))
-        proc.start('ssh', remote.ssh_argv(self.conn(), script)[1:])
+        proc.start('ssh', remote.ssh_argv(self.conn(), script, tty=True)[1:])
         return proc
 
     # ------------------------------------------------------------ status
@@ -457,12 +466,19 @@ class MainWindow(QMainWindow):
         def done(code, output):
             self.status_busy = False
             was = self.reachable
-            self.reachable = code == 0
-            if self.reachable:
+            if code == 0:
+                self.poll_failures = 0
+                self.reachable = True
                 self.sessions = remote.parse_sessions(output)
-            elif was is not False:
-                self.output_log.append_text(
-                    f'[rover unreachable over ssh] {output.strip()}\n')
+            else:
+                # One dropped poll on a weak field link is not "unreachable"
+                self.poll_failures += 1
+                if self.poll_failures < UNREACHABLE_AFTER and was is not None:
+                    return
+                self.reachable = False
+                if was is not False:
+                    self.output_log.append_text(
+                        f'[rover unreachable over ssh] {output.strip()}\n')
             if self.reachable and not was and self.launch_combo.count() == 0:
                 self.refresh_launch_files()
             self.update_ui()
@@ -472,7 +488,8 @@ class MainWindow(QMainWindow):
     def update_ui(self):
         active = self.active_launch()
         building = remote.BUILD_SESSION in self.sessions
-        can_start = bool(self.reachable) and active is None
+        # No launch during a build: it would load half-built files
+        can_start = bool(self.reachable) and active is None and not building
 
         if self.reachable is None:
             self.session_label.setText('Running: ?')
@@ -486,23 +503,29 @@ class MainWindow(QMainWindow):
 
         for card in self.cards:
             card.update_state(card.session in self.sessions, can_start)
-        self.dev_start_btn.setEnabled(can_start and bool(self.launch_combo.currentText()))
+        launch = self.launch_combo.currentText()
+        self.dev_start_btn.setEnabled(
+            can_start and bool(launch) and self.dev_args_for == launch)
         self.dev_stop_btn.setEnabled(bool(active))
         self.dev_attach_btn.setEnabled(bool(active))
         self.build_btn.setEnabled(bool(self.reachable) and not building)
         self.build_stop_btn.setEnabled(building)
         self.stop_all_btn.setEnabled(self.reachable is not False)
 
-        if active and self.tailing.get('launch') != active:
+        # Compared by run id, so a restart of the same session is a new run
+        if active and self.tailing.get('launch') != self.sessions[active]:
             self.on_launch_detected(active)
-        if building and self.tailing.get('build') != remote.BUILD_SESSION:
-            self.tailing['build'] = remote.BUILD_SESSION
+        build_run = self.sessions.get(remote.BUILD_SESSION)
+        if build_run and self.tailing.get('build') != build_run:
+            self.tailing['build'] = build_run
+            self.build_log.clear()
+            self.logs.setCurrentWidget(self.build_log)
             self.build_tail = self.restart_tail(self.build_tail, remote.BUILD_SESSION,
                                                 self.build_log)
 
     def on_launch_detected(self, session: str):
         """A launch started, by us or anyone: follow its log and checks."""
-        self.tailing['launch'] = session
+        self.tailing['launch'] = self.sessions[session]
         self.launch_log.clear()
         self.launch_tail = self.restart_tail(self.launch_tail, session, self.launch_log)
         self.logs.setCurrentWidget(self.launch_log)
@@ -585,10 +608,15 @@ class MainWindow(QMainWindow):
             if remote.mission_session(m.id) == session:
                 return m
         if session.startswith(remote.DEV_PREFIX):
-            launch = self.launch_combo.currentText()
-            if remote.dev_session(launch) == session:
+            # The file that is running, not whatever the dropdown shows now
+            launch = self.dev_launches.get(session) or next(
+                (f for f in self.launch_files() if remote.dev_session(f) == session), None)
+            if launch:
                 return self.registry.mission_for_launch(launch)
         return None
+
+    def launch_files(self) -> List[str]:
+        return [self.launch_combo.itemText(i) for i in range(self.launch_combo.count())]
 
     def checks_for(self, session: str) -> Dict[str, str]:
         mission = self.mission_for_session(session)
@@ -682,6 +710,9 @@ class MainWindow(QMainWindow):
         while self.args_form.rowCount():
             self.args_form.removeRow(0)
         self.dev_arg_widgets, self.dev_arg_defaults = {}, {}
+        self.dev_args_for = None
+        if self.pending_preset and self.pending_preset[0] != launch_file:
+            self.pending_preset = None
         self.update_ui()
         if not launch_file:
             return
@@ -692,12 +723,15 @@ class MainWindow(QMainWindow):
                 return              # selection changed while loading
             while self.args_form.rowCount():
                 self.args_form.removeRow(0)
+            pending = {}
+            if self.pending_preset and self.pending_preset[0] == launch_file:
+                pending = self.pending_preset[1]
+            self.pending_preset = None
             if code != 0:
-                self.args_form.addRow(QLabel('could not read arguments'))
+                # Start stays disabled: no form means no use_mock_hardware
+                self.args_form.addRow(QLabel('could not read arguments (Refresh to retry)'))
                 self.output_log.append_text(output)
                 return
-            pending = self.pending_args or {}
-            self.pending_args = None
             for arg in remote.parse_show_args(output):
                 default = arg.default
                 # Dev launches default to mock so nothing drives by accident
@@ -721,6 +755,8 @@ class MainWindow(QMainWindow):
                 self.dev_arg_defaults[arg.name] = default
             if not self.dev_arg_widgets:
                 self.args_form.addRow(QLabel('no arguments'))
+            self.dev_args_for = launch_file
+            self.update_ui()
 
         self.ssh(remote.show_args_script(self.conn(), self.registry.package, launch_file),
                  done, echo=False)
@@ -734,6 +770,8 @@ class MainWindow(QMainWindow):
 
     def start_dev(self):
         launch = self.launch_combo.currentText()
+        if self.dev_args_for != launch:
+            return          # arguments not loaded; the button is disabled too
         values = self.dev_values()
         missing = [n for n, v in values.items()
                    if not v and self.dev_arg_defaults.get(n) is None]
@@ -743,8 +781,10 @@ class MainWindow(QMainWindow):
         # Only pass what differs from the launch file's own defaults
         args = {n: v for n, v in values.items()
                 if v and v != self.dev_arg_defaults.get(n)}
+        session = remote.dev_session(launch)
+        self.dev_launches[session] = launch
         script = remote.start_launch_script(
-            self.conn(), remote.dev_session(launch), self.registry.package, launch, args)
+            self.conn(), session, self.registry.package, launch, args)
         self.start_launch(script, f'start {launch} ' + remote.render_launch_args(args))
 
     def reload_presets(self):
@@ -777,7 +817,12 @@ class MainWindow(QMainWindow):
         preset = self.settings.presets().get(self.preset_combo.currentText())
         if not preset:
             return
-        self.pending_args = preset['args']
+        if preset['launch'] not in self.launch_files():
+            QMessageBox.warning(
+                self, 'Preset', f'{preset["launch"]} is not in {self.registry.package} '
+                'on the rover any more. Delete the preset or Refresh the file list.')
+            return
+        self.pending_preset = (preset['launch'], preset['args'])
         if self.launch_combo.currentText() == preset['launch']:
             self.load_launch_args(preset['launch'])
         else:
@@ -799,9 +844,7 @@ class MainWindow(QMainWindow):
         command = remote.build_command(self.conn(), packages)
         script = remote.start_session_script(
             self.conn(), remote.BUILD_SESSION, command, exclusive=False)
-        self.build_log.clear()
-        self.tailing.pop('build', None)
-        self.logs.setCurrentWidget(self.build_log)
+        # The build log is cleared and followed once the new run shows up
         self.ssh(script, lambda *_: self.poll_status(), label='colcon build')
 
     # ------------------------------------------------------------ misc
