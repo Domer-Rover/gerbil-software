@@ -82,7 +82,12 @@ The timestamped CSV contains one row per profile, including:
 - requested capture resolution/rate and published resolution/rate;
 - measured ROS image topic rate;
 - mean and approximate 95th-percentile CPU use per core, GPU use, and RAM use;
-- the path to the raw `tegrastats` log for that profile.
+- paths to the raw `tegrastats` and ROS camera launch logs for that profile.
+
+If a trial reports an empty image rate or the camera launch exits, inspect that
+profile's `*-launch.log` before interpreting its load readings. The topic-rate
+sample is time-bounded; if the selected topic does not appear during the sample,
+the rate is left empty and the benchmark continues to the next profile.
 
 Keep the CSV and raw logs together. Also report the Nano model/RAM size, power
 mode, ambient/thermal conditions, ROS and ZED SDK versions, which other

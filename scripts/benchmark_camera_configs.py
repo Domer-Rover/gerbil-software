@@ -90,19 +90,20 @@ def topic_rate(topic, seconds):
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         start_new_session=True,
     )
-    output = []
     try:
-        end = time.monotonic() + seconds
-        while time.monotonic() < end:
-            line = proc.stdout.readline()
-            if line:
-                output.append(line)
-            elif proc.poll() is not None:
-                break
-    finally:
+        time.sleep(seconds)
         stop_process(proc)
+        output, _ = proc.communicate(timeout=3)
+    except KeyboardInterrupt:
+        stop_process(proc)
+        raise
+    except subprocess.TimeoutExpired:
+        stop_process(proc)
+        output, _ = proc.communicate()
+    if isinstance(output, bytes):
+        output = output.decode(errors="replace")
     rates = []
-    for line in output:
+    for line in output.splitlines():
         m = re.search(r"average rate:\s*([\d.]+)", line)
         if m:
             rates.append(float(m.group(1)))
@@ -166,22 +167,25 @@ def main():
             override = Path(tmp) / f"{name}.yaml"
             override.write_text(override_yaml(profile))
             stats_path = args.output / f"{stamp}-{name}-tegrastats.log"
+            launch_log_path = args.output / f"{stamp}-{name}-launch.log"
             launch_cmd = [
                 "ros2", "launch", "zed_wrapper", "zed_camera.launch.py",
                 "camera_model:=zed2i", f"camera_name:={args.camera_name}",
                 "publish_urdf:=false", "publish_tf:=false", "publish_map_tf:=false",
                 f"ros_params_override_path:={override}",
             ]
-            print(f"[{index}/10] {name}: starting camera")
+            print(f"[{index}/10] {name}: starting camera (allowing {args.startup}s)", flush=True)
+            launch_log_file = launch_log_path.open("w")
             launch = subprocess.Popen(
-                launch_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+                launch_cmd, stdout=launch_log_file, stderr=subprocess.STDOUT,
                 start_new_session=True,
             )
             stats = None
             try:
                 time.sleep(args.startup)
                 if launch.poll() is not None:
-                    print(f"  launch exited early ({launch.returncode}); inspect ROS logs")
+                    print(f"  launch exited early ({launch.returncode}); see {launch_log_path}")
+                print(f"  measuring load and {args.topic} rate for {args.duration}s", flush=True)
                 stats = subprocess.Popen(
                     ["tegrastats", "--interval", "1000", "--logfile", str(stats_path)],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -194,11 +198,14 @@ def main():
                 stop_process(launch)
                 if stats:
                     stop_process(stats)
+                launch_log_file.close()
                 raise
             finally:
                 stop_process(launch)
                 if stats:
                     stop_process(stats)
+                if not launch_log_file.closed:
+                    launch_log_file.close()
 
             row = {
                 "name": name,
@@ -210,6 +217,7 @@ def main():
                 "measured_image_hz": measured_rate,
                 **read_tegrastats(stats_path),
                 "tegrastats_log": str(stats_path),
+                "launch_log": str(launch_log_path),
             }
             rows.append(row)
             print(f"  image={measured_rate or 'unavailable'} Hz; "
