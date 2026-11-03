@@ -41,7 +41,7 @@ def generate_launch_description():
 
     use_duty_cycle_arg = DeclareLaunchArgument(
         'use_duty_cycle',
-        default_value='true',
+        default_value='false',
         description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 

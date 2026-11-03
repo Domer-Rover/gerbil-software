@@ -23,7 +23,8 @@ def generate_launch_description():
 
     use_duty_cycle_arg = DeclareLaunchArgument(
         'use_duty_cycle',
-        default_value='true',
+        default_value='false',
+        description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 
     use_joystick_arg = DeclareLaunchArgument(
@@ -33,7 +34,7 @@ def generate_launch_description():
 
     launch_lidar_arg = DeclareLaunchArgument(
         'launch_lidar',
-        default_value='false',
+        default_value='true',
     )
 
     launch_gps_arg = DeclareLaunchArgument(
