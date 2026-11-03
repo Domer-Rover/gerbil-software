@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mission_launcher"
+version = "0.1.0"
+description = "Base-station GUI that starts Domer Rover missions on the rover over SSH"
+requires-python = ">=3.8"
+dependencies = ["PyQt5>=5.15", "PyYAML"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+mission-launcher = "mission_launcher.__main__:main"
+
+[tool.setuptools]
+packages = ["mission_launcher"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
