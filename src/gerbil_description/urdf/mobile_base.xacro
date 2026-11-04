@@ -298,14 +298,18 @@
     </joint>
 
 
-    <!-- LIDAR mounted on the chassis top, centred.
-         TODO - measure the real mount position and yaw. The rpy below assumes
-         the same 90 deg clockwise mounting as Capybara; verify in Foxglove
-         that an object in front of the robot appears in front on /scan. -->
+    <!-- LIDAR, sitting on top of the ZED camera mount.
+         Yaw was -1.5708 (Capybara's 90 deg clockwise assumption); rotated 180
+         deg to +1.5708 on 2026-11-03. The angular bounds in laser_filter.yaml
+         are coupled to this value - rotating the frame moves which raw scan
+         angles point forward, so the two must be changed together.
+         TODO - the XYZ still places the LIDAR at the chassis centre, but it is
+         physically above the camera mount at the front (x ~ 0.2848). Measure
+         and correct; until then obstacle ranges carry that offset as error. -->
     <joint name="lidar_joint" type="fixed">
         <parent link="base_link" />
         <child link="laser_frame" />
-        <origin xyz="0 0 ${base_height + 0.023}" rpy="0 0 -1.5708" />
+        <origin xyz="0 0 ${base_height + 0.023}" rpy="0 0 1.5708" />
     </joint>
 
 </robot>
