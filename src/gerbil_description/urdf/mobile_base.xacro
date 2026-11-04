@@ -299,17 +299,20 @@
 
 
     <!-- LIDAR, sitting on top of the ZED camera mount.
-         Yaw was -1.5708 (Capybara's 90 deg clockwise assumption); rotated 180
-         deg to +1.5708 on 2026-11-03. The angular bounds in laser_filter.yaml
-         are coupled to this value - rotating the frame moves which raw scan
-         angles point forward, so the two must be changed together.
+         Yaw is deliberately 0 while the real mounting angle is measured: the
+         scan is then drawn in the LIDAR's own orientation, so the angle an
+         object directly in front appears at IS the mounting offset. Set yaw to
+         the negative of that angle. Previous guesses were -1.5708 (inherited
+         from Capybara) and +1.5708; neither was ever confirmed.
+         laser_filter.yaml's angular bounds are coupled to this value and its
+         front-180 crop is disabled until the yaw is known.
          TODO - the XYZ still places the LIDAR at the chassis centre, but it is
          physically above the camera mount at the front (x ~ 0.2848). Measure
          and correct; until then obstacle ranges carry that offset as error. -->
     <joint name="lidar_joint" type="fixed">
         <parent link="base_link" />
         <child link="laser_frame" />
-        <origin xyz="0 0 ${base_height + 0.023}" rpy="0 0 1.5708" />
+        <origin xyz="0 0 ${base_height + 0.023}" rpy="0 0 0" />
     </joint>
 
 </robot>
