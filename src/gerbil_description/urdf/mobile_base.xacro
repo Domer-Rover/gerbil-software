@@ -12,7 +12,7 @@
     <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm diameter -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
-    <xacro:property name="wheel_separation" value="0.42285" /> <!-- 422.85mm center-to-center -->
+    <xacro:property name="wheel_separation" value="0.457073" /> <!-- 457.073mm (18 in) center-to-center, taped 2026-11-03 -->
 
     <!-- Wheel X position - near front edge of chassis -->
     <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
