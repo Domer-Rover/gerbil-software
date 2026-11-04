@@ -1,6 +1,11 @@
 controller_manager: 
   ros__parameters:
-    update_rate: 20 # Hz (reduced from 100 for reliable RoboClaw serial comms)
+    # Master clock: every downstream rate is capped by this. The ceiling is the
+    # 10ms select() timeout in roboclaw_serial device.hpp read(), called twice
+    # per cycle inside the control loop -- at 100Hz one timed-out read eats the
+    # whole 10ms period, which is why 100 did not work. At 50Hz a worst-case
+    # read is half the 20ms budget. If "Overrun" warnings appear, drop to 30.
+    update_rate: 50 # Hz
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -21,7 +26,7 @@ diff_drive_controller:
     right_wheel_radius_multiplier: 1.0
 
     # ==================== ODOMETRY ====================
-    publish_rate: 50.0  # Hz (reduced from 100 for efficiency)
+    publish_rate: 50.0  # Hz (matches update_rate; was unreachable at update_rate 20)
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
     

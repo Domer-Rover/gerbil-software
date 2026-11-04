@@ -4,7 +4,7 @@
 # publish_tf:=false.
 ekf_filter_node:
   ros__parameters:
-    frequency: 30.0
+    frequency: 50.0               # matches controller_manager update_rate
     sensor_timeout: 0.2
     two_d_mode: true              # planar indoor robot
     publish_tf: true

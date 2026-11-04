@@ -134,8 +134,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       footprint_padding: 0.03
-      update_frequency: 5.0
-      publish_frequency: 1.0
+      update_frequency: 2.0    # rolling window with no map; the planner runs at ~1Hz
+      publish_frequency: 1.0   # visualisation only -- deliberately low
       transform_tolerance: 0.3
       global_frame: odom
       robot_base_frame: base_footprint
@@ -177,8 +177,8 @@ local_costmap:
   local_costmap:
     ros__parameters:
       footprint_padding: 0.03
-      update_frequency: 5.0
-      publish_frequency: 2.0
+      update_frequency: 10.0   # match the LD19 scan rate; 5.0 discarded every other scan
+      publish_frequency: 2.0   # visualisation only -- deliberately low
       transform_tolerance: 0.3
       global_frame: odom
       robot_base_frame: base_footprint
