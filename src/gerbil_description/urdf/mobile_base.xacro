@@ -2,8 +2,8 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <!-- ROBOT DIMENSIONS -->
-    <!-- Drive wheels and ZED camera are at the front (+X) -->
-    <!-- Caster wheel is at the rear (-X) -->
+    <!-- +X is forward. Drive wheels and ZED camera are at the front (+X);
+         the caster trails at the rear (-X). Confirmed on hardware 2026-11-03. -->
     <xacro:property name="base_length" value="0.6096" />      <!-- 24 inches -->
     <xacro:property name="base_width" value="0.3048" />       <!-- 12 inches -->
     <xacro:property name="base_height" value="0.0635" />      <!-- 2.5 inches -->
@@ -152,7 +152,7 @@
         <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
     </joint>
 
-    <!-- Drive wheels at rear but changed to front -->
+    <!-- Drive wheels, at the front (+X) -->
     <joint name="base_right_wheel_joint" type="continuous">
         <parent link="base_link" />
         <child link="right_wheel_link" />
@@ -167,7 +167,7 @@
         <axis xyz="0 1 0" />
     </joint>
 
-    <!-- Caster at the front, but we consider it rear -->
+    <!-- Caster, trailing at the rear (-X) -->
     <joint name="base_caster_wheel_joint" type="fixed">
         <parent link="base_link" />
         <child link="caster_wheel_link" />
@@ -204,7 +204,7 @@
         <origin xyz="0 0 ${base_height + 0.005}" rpy="0 0 0" />
     </joint>
 
-    <!-- ZED camera at front edge, on top of chassis, facing forward (rear) -->
+    <!-- ZED camera at the front edge, on top of the chassis, facing forward (+X) -->
     <joint name="camera_joint" type="fixed">
         <parent link="base_link" />
         <child link="zed_camera_link" />

@@ -35,7 +35,7 @@
             <state_interface name="position"/>
             <param name="address">128</param>
             <param name="qppr">2786</param>  <!-- goBILDA 5304-8002-0100, 2786.2 PPR at the output shaft -->
-            <param name="motor_type">M2</param>
+            <param name="motor_type">M1</param>  <!-- M1 is the physical LEFT wheel -->
             <!-- Motor speed (rad/s) that maps to 100 percent duty cycle. Lower = more responsive -->
             <param name="max_duty_speed">18.85</param>
         </joint>
@@ -47,7 +47,7 @@
             <state_interface name="position"/>
             <param name="address">128</param>
             <param name="qppr">2786</param>  <!-- goBILDA 5304-8002-0100, 2786.2 PPR at the output shaft -->
-            <param name="motor_type">M1</param>
+            <param name="motor_type">M2</param>  <!-- M2 is the physical RIGHT wheel -->
             <!-- Motor speed (rad/s) that maps to 100 percent duty cycle. Lower = more responsive -->
             <param name="max_duty_speed">18.85</param>
         </joint>
