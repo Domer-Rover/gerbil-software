@@ -12,10 +12,34 @@
     <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm diameter -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
-    <xacro:property name="wheel_separation" value="0.457073" /> <!-- 457.073mm (18 in) center-to-center, taped 2026-11-03 -->
+    <!-- 422.85mm center-to-center. Cross-checked 2026-11-03: the outer faces
+         tape at 457.073mm (18 in), and 457.073 - 31.95 (one tyre width) =
+         425.1, so the two measurements agree. -->
+    <xacro:property name="wheel_separation" value="0.42285" />
 
     <!-- Wheel X position - near front edge of chassis -->
     <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
+
+    <!-- DRIVE RAIL ASSEMBLY (under the acrylic chassis, in a T)
+         The long arm of the T runs fore-aft down the centreline; the top of
+         the T is a transverse rail at the front carrying both motors. The
+         motor bodies run inboard under the chassis and their output shafts
+         protrude past the chassis sides, which is why wheel_separation
+         (422.85mm) is wider than base_width (304.8mm).
+         Motor body: goBILDA 5304 Yellow Jacket, 99.5:1.
+         These are ESTIMATES for visualisation - tape-measure and correct. -->
+    <xacro:property name="rail_thickness" value="0.02" />
+    <xacro:property name="rail_long_length" value="0.45" />
+    <xacro:property name="rail_long_width" value="0.05" />
+    <xacro:property name="rail_cross_length" value="0.30" />
+    <xacro:property name="rail_cross_width" value="0.05" />
+    <xacro:property name="motor_diameter" value="0.037" />
+    <xacro:property name="motor_length" value="0.095" />
+    <!-- Motor sits just inboard of the wheel: its outer face meets the tyre's
+         inner face, so the body reaches back under the chassis. -->
+    <xacro:property name="motor_y" value="${wheel_separation / 2.0 - wheel_length / 2.0 - motor_length / 2.0}" />
+    <!-- Rails hang below the chassis underside, which is base_link z=0 -->
+    <xacro:property name="rail_z" value="${-rail_thickness / 2.0}" />
 
     <!-- BASE FOOTPRINT -->
     <link name="base_footprint" />
@@ -35,6 +59,68 @@
             </geometry>
             <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
         </collision>
+
+        <!-- T-rail: long arm down the centreline, running back from the
+             transverse rail at the front -->
+        <visual>
+            <geometry>
+                <box size="${rail_long_length} ${rail_long_width} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset - rail_long_length / 2.0} 0 ${rail_z}" rpy="0 0 0" />
+            <material name="grey" />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${rail_long_length} ${rail_long_width} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset - rail_long_length / 2.0} 0 ${rail_z}" rpy="0 0 0" />
+        </collision>
+
+        <!-- T-rail: transverse arm at the front, carrying both motors -->
+        <visual>
+            <geometry>
+                <box size="${rail_cross_width} ${rail_cross_length} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} 0 ${rail_z}" rpy="0 0 0" />
+            <material name="grey" />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${rail_cross_width} ${rail_cross_length} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} 0 ${rail_z}" rpy="0 0 0" />
+        </collision>
+
+        <!-- Left drive motor, protruding outboard of the chassis -->
+        <visual>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${motor_y} 0" rpy="${pi / 2.0} 0 0" />
+            <material name="black" />
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${motor_y} 0" rpy="${pi / 2.0} 0 0" />
+        </collision>
+
+        <!-- Right drive motor -->
+        <visual>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${-motor_y} 0" rpy="${pi / 2.0} 0 0" />
+            <material name="black" />
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${-motor_y} 0" rpy="${pi / 2.0} 0 0" />
+        </collision>
+
         <inertial>
             <mass value="${base_mass}" />
             <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
