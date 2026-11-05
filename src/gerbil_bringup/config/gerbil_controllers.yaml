@@ -17,8 +17,13 @@ diff_drive_controller:
   ros__parameters: 
     left_wheel_names: ["base_left_wheel_joint"]
     right_wheel_names: ["base_right_wheel_joint"]
-    wheel_separation: 0.42285  # 422.85mm center-to-center; outer faces tape at 457.073mm
-    wheel_radius: 0.04756     # 95.11mm diameter measured
+    # These two are the ONLY copies that affect odometry: the xacro's values
+    # are for visualisation and TF. Keep them in sync by hand.
+    wheel_separation: 0.44    # 440mm tread-centre to tread-centre, tape 2026-11-05
+    # ROLLING radius: axle centre to the OUTER tread surface (ground contact),
+    # not to the rim. A 1.5 in / 0.0381 tape read on 2026-11-05 was to the rim;
+    # plus a ~3/8 in tread that gives 0.0476, matching this recorded value.
+    wheel_radius: 0.04756     # 95.11mm rolling diameter
     
     # Multipliers for fine-tuning (1.0 = no adjustment)
     wheel_separation_multiplier: 1.0

@@ -9,20 +9,22 @@
     <!-- base_height USED to mean two things at once: the acrylic plate's own
          thickness AND its height off the ground. Split 2026-11-05 after tape
          measurements. base_link z=0 remains the wheel axle plane. -->
-    <xacro:property name="base_thickness" value="0.00254" />   <!-- 0.1 in acrylic plate. You said ".1cm"; 1mm would not be structural, so 0.1in assumed - correct me if it really is 1mm -->
+    <xacro:property name="base_thickness" value="0.00508" />   <!-- 0.2 in acrylic plate, measured 2026-11-05 -->
     <xacro:property name="base_clearance" value="0.0635" />    <!-- 2.5 in, ground to plate underside -->
     <!-- Kept as an alias so nothing downstream breaks; it is the TOP surface
          of the deck above the ground, which is what sensors mount to. -->
     <xacro:property name="base_height" value="${base_clearance + base_thickness}" />
     <xacro:property name="base_mass" value="6.8" />           <!-- ~15 lbs -->
 
-    <!-- KEPT at the measured 0.04756 (95.11mm dia), NOT the nominal 2 in /
-         0.0508 you quoted. This value scales wheel odometry directly, so a
-         6.8% change would rescale every distance Nav2 travels. 0.04756 is a
-         loaded-tyre measurement, which is the correct one for odometry and is
-         expected to read under nominal. Confirm with the 2m drive test before
-         touching it. -->
-    <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm diameter -->
+    <!-- ROLLING radius: centre of the axle to the OUTER surface of the tread,
+         i.e. the ground contact patch - NOT to the rim. Distance per
+         revolution is 2*pi*r measured at the contact patch, so anything short
+         of the tread surface under-reports travel.
+         Resolved 2026-11-05: a tape read of 1.5 in / 0.0381 was to the RIM.
+         0.0381 + ~0.0095 (a 3/8 in rubber tread) = 0.0476, which is the
+         recorded 0.04756, so the two readings agree and this value stands.
+         Scales wheel odometry linearly; confirm with the 2m drive test. -->
+    <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm rolling diameter -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
     <!-- Deck underside in base_link coords (base_link z=0 is the axle plane).
@@ -54,13 +56,20 @@
     <xacro:property name="camera_z" value="${lidar_z - lidar_housing_length / 2.0 - 0.001 - camera_height / 2.0}" />
     <!-- The printed mould fills the gap from the deck up to the camera -->
     <xacro:property name="mount_height" value="${camera_z - camera_height / 2.0 - deck_top}" />
-    <!-- 422.85mm center-to-center. Cross-checked 2026-11-03: the outer faces
-         tape at 457.073mm (18 in), and 457.073 - 31.95 (one tyre width) =
-         425.1, so the two measurements agree. A later tape read 17 in /
-         431.8mm; that is within 9mm of this and lands between the two earlier
-         figures, so the measured 422.85 is kept. Like wheel_radius this scales
-         odometry (yaw rate), so confirm with the 360-degree spin test. -->
-    <xacro:property name="wheel_separation" value="0.42285" />
+    <!-- 440mm, tread-centre to tread-centre, measured 2026-11-05. This is
+         exactly the quantity diff_drive_controller wants, so it supersedes the
+         earlier figures which were all derived from outer-face readings:
+           0.42285  (recorded "center-to-center")
+           0.457073 outer face to outer face -> 0.4251 once a tyre width is
+                    subtracted, but that subtracts a full width where only one
+                    is needed, so it under-reads
+           0.4318   (17 in) a rougher read of the same thing
+         440 - 31.95 = 408 inner, 440 + 31.95 = 472 outer, both consistent with
+         the 457-472 range the outer tape could plausibly have produced.
+         Scales reported YAW RATE linearly: too small and the robot thinks it
+         turned further than it did. Confirm with the 360-degree spin test, and
+         keep in sync with gerbil_controllers.yaml. -->
+    <xacro:property name="wheel_separation" value="0.44" />
 
     <!-- Wheel X position - near front edge of chassis -->
     <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
