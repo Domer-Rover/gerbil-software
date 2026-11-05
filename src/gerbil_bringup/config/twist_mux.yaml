@@ -33,6 +33,12 @@ twist_mux:
                 timeout: 0.5
                 priority: 10
 
-        # Locks are latched kill switches that block ALL topics below their
-        # priority. Wired for an e-stop topic later; harmless while unused.
-        locks: []
+        # NOTE: do NOT add "locks: []" here. ROS 2 cannot infer a type for an
+        # empty array parameter and twist_mux aborts with SIGABRT on startup.
+        # Locks are latched kill switches that block every topic below their
+        # priority. To add an e-stop later, declare it with real contents:
+        #   locks:
+        #     e_stop:
+        #       topic: e_stop
+        #       timeout: 0.0
+        #       priority: 255
