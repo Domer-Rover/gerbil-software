@@ -415,21 +415,23 @@
 
 
     <!-- LIDAR, sitting on top of the ZED camera mount.
-         Yaw is deliberately 0 while the real mounting angle is measured: the
-         scan is then drawn in the LIDAR's own orientation, so the angle an
-         object directly in front appears at IS the mounting offset. Set yaw to
-         the negative of that angle. Previous guesses were -1.5708 (inherited
-         from Capybara) and +1.5708. Neither was ever confirmed.
-         laser_filter.yaml's angular bounds are coupled to this value and its
-         front-180 crop is disabled until the yaw is known.
-         XYZ measured 2026-11-05: 1.5 in back from the front edge, scan plane
-         6 in above the deck. This replaces the old "0 0" placement, which put
-         the LIDAR at the chassis centre and so biased every obstacle range by
-         about 27cm. -->
+         YAW MEASURED 2026-11-05. With yaw=0 the scan rendered 90 deg CCW of
+         reality, objects in front of the rover appeared off to its left, so
+         the mount is a quarter turn out and needs -pi/2 (90 deg clockwise) to
+         line the scan up with base_link. This confirms the -1.5708 originally
+         inherited from Capybara and rules out the +1.5708 that replaced it.
+         laser_filter.yaml's front-180 bounds are COUPLED to this value. A ray
+         at laser angle a points at a - pi/2 in base_link, so the forward half
+         is a in [0, pi]. Change this yaw and those bounds must change too.
+         XYZ measured 2026-11-05, 1.5 in back from the front edge, scan plane
+         6 in above the deck. This replaced an old "0 0" placement that put
+         the LIDAR at the chassis centre and biased every range by about 27cm.
+         The scan plane is only 0.221 m off the ground, which is why the rear
+         half has to be cropped rather than kept. -->
     <joint name="lidar_joint" type="fixed">
         <parent link="base_link" />
         <child link="laser_frame" />
-        <origin xyz="${lidar_x} 0 ${lidar_z}" rpy="0 0 0" />
+        <origin xyz="${lidar_x} 0 ${lidar_z}" rpy="0 0 ${-pi / 2.0}" />
     </joint>
 
 </robot>
