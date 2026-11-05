@@ -59,12 +59,13 @@ void RoboClawUnit::read()
       joints[1]->setPositionState(m2_ticks);
     }
   } catch (const std::exception & e) {
-    static auto last_log = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_log).count() >= 5) {
+    if (!last_read_error_log_ ||
+      std::chrono::duration_cast<std::chrono::seconds>(now - *last_read_error_log_).count() >= 5)
+    {
       std::cerr << "[RoboClawUnit] Read error from RoboClaw 0x" << std::hex
                 << static_cast<int>(address_) << std::dec << ": " << e.what() << std::endl;
-      last_log = now;
+      last_read_error_log_ = now;
     }
     return;
   }
@@ -77,6 +78,7 @@ void RoboClawUnit::write()
     if (use_duty_cycle_) {
       // Duty cycle mode: no encoders needed
       auto & [m1_duty, m2_duty] = duty_command_.fields;
+      // getDutyCycleCommand() already clamps to +/-32767 and returns int16_t
       if (joints[0]) {
         m1_duty = joints[0]->getDutyCycleCommand();
       }
@@ -96,14 +98,35 @@ void RoboClawUnit::write()
       interface_->write(tick_rate_command_, address_);
     }
   } catch (const std::exception & e) {
-    static auto last_log = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_log).count() >= 5) {
+    if (!last_write_error_log_ ||
+      std::chrono::duration_cast<std::chrono::seconds>(now - *last_write_error_log_).count() >= 5)
+    {
       std::cerr << "[RoboClawUnit] Write error to RoboClaw 0x" << std::hex
                 << static_cast<int>(address_) << std::dec << ": " << e.what() << std::endl;
-      last_log = now;
+      last_write_error_log_ = now;
     }
     return;
+  }
+}
+
+void RoboClawUnit::stop()
+{
+  try {
+    if (use_duty_cycle_) {
+      auto & [m1_duty, m2_duty] = duty_command_.fields;
+      m1_duty = 0;
+      m2_duty = 0;
+      interface_->write(duty_command_, address_);
+    } else {
+      auto & [m1_speed, m2_speed] = tick_rate_command_.fields;
+      m1_speed = 0;
+      m2_speed = 0;
+      interface_->write(tick_rate_command_, address_);
+    }
+  } catch (const std::exception & e) {
+    std::cerr << "[RoboClawUnit] Failed to stop RoboClaw 0x" << std::hex
+              << static_cast<int>(address_) << std::dec << ": " << e.what() << std::endl;
   }
 }
 }  // namespace roboclaw_hardware_interface

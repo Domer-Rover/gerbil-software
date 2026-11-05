@@ -15,7 +15,9 @@
 #ifndef ROBOCLAW_HARDWARE_INTERFACE__ROBOCLAW_UNIT_HPP_
 #define ROBOCLAW_HARDWARE_INTERFACE__ROBOCLAW_UNIT_HPP_
 
+#include <chrono>
 #include <map>
+#include <optional>
 #include <roboclaw_serial/command.hpp>
 #include <roboclaw_serial/interface.hpp>
 
@@ -36,8 +38,12 @@ public:
   // Read the encoder counts from the roboclaw and update position state
   void read();
 
-  // Convert the velocity command to motor command and write to the roboclaw
+  // Convert the velocity command to motor command and write to the roboclaw.
   void write();
+
+  // Command both motors to zero. Used on deactivation so the roboclaw does not
+  // keep driving on the last command it received.
+  void stop();
 
 private:
   roboclaw_serial::Interface::SharedPtr interface_;
@@ -48,6 +54,11 @@ private:
   roboclaw_serial::DriveM1M2WithSignedSpeed tick_rate_command_;
   roboclaw_serial::DriveM1M2WithSignedDuty duty_command_;
   roboclaw_serial::EncoderCounters encoder_state_;
+
+  // Rate limiting for error logs, tracked per unit and per direction so that
+  // one roboclaw's errors do not suppress another's
+  std::optional<std::chrono::steady_clock::time_point> last_read_error_log_;
+  std::optional<std::chrono::steady_clock::time_point> last_write_error_log_;
 };
 }  // namespace roboclaw_hardware_interface
 

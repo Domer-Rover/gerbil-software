@@ -15,9 +15,12 @@
 #pragma once
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -42,9 +45,21 @@ public:
     connected_ = fd_ != -1;
 
     if (connected_) {
+      // Claim exclusive access so a second process (e.g. another
+      // ros2_control_node) opening this port fails fast with EBUSY instead of
+      // silently interleaving its traffic with ours on the wire, which
+      // otherwise manifests as CRC mismatches and read timeouts on both sides.
+      if (ioctl(fd_, TIOCEXCL) < 0) {
+        std::cerr << "Warning: failed to set exclusive access on " << device << std::endl;
+      }
       setSerialDeviceOptions();
     } else {
       std::cerr << "Failed to open serial device: " << device << std::endl;
+      if (errno == EBUSY) {
+        std::cerr << "Device is already open by another process (e.g. another "
+                     "ros2_control_node instance). Only one process may talk to "
+                     "the RoboClaws at a time." << std::endl;
+      }
       perror("Error");
     }
 
@@ -98,6 +113,31 @@ public:
     }
 
     return static_cast<std::size_t>(result);
+  }
+
+  // Reads exactly `count` bytes, retrying until the full response arrives or
+  // the overall deadline elapses. A single read() only guarantees that at
+  // least one byte was available, and can return fewer bytes than requested
+  // when the response is split across multiple USB frames from the serial
+  // adapter. Treating that partial data as a complete response corrupts CRC
+  // checks and field parsing, so callers that know the exact expected size
+  // should use this instead of read().
+  std::size_t read_exact(std::byte * buffer, std::size_t count)
+  {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(20);
+    std::size_t total_read = 0;
+
+    while (total_read < count) {
+      if (std::chrono::steady_clock::now() >= deadline) {
+        throw std::runtime_error("Read timeout!");
+      }
+
+      // Dispatches to read(), so the per-call timeout and any device-specific
+      // behaviour stay in one place
+      total_read += read(buffer + total_read, count - total_read);
+    }
+
+    return total_read;
   }
 
 protected:

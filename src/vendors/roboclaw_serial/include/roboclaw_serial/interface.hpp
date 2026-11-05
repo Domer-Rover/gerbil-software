@@ -64,11 +64,18 @@ public:
     // Write the buffer to the serial device
     device_->write(buffer_.data(), buffer_.size());
 
-    // Set the buffer to the size of the fields, size of CRC
-    buffer_.resize(buffer_.max_size());
-
-    // Read the response from the device
-    std::size_t bytes_read = device_->read(buffer_.data(), buffer_.size());
+    // Read the response from the device. When the response size is known
+    // ahead of time (all fixed-size fields), read exactly that many bytes,
+    // retrying as needed, so a response split across multiple USB frames
+    // isn't mistaken for a short/corrupt one.
+    std::size_t bytes_read;
+    if constexpr (Request::has_fixed_size_response) {
+      buffer_.resize(Request::response_size);
+      bytes_read = device_->read_exact(buffer_.data(), buffer_.size());
+    } else {
+      buffer_.resize(buffer_.max_size());
+      bytes_read = device_->read(buffer_.data(), buffer_.size());
+    }
 
     buffer_.resize(bytes_read);
 
@@ -192,7 +199,7 @@ private:
   {
     // We only expect an ACK from the roboclaw
     buffer_.resize(1);
-    device_->read(buffer_.data(), buffer_.size());
+    device_->read_exact(buffer_.data(), buffer_.size());
 
     return buffer_.pop_back() == ACK;
   }
