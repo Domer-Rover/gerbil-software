@@ -21,9 +21,12 @@ diff_drive_controller:
     # are for visualisation and TF. Keep them in sync by hand.
     wheel_separation: 0.44    # 440mm tread-centre to tread-centre, tape 2026-11-05
     # ROLLING radius: axle centre to the OUTER tread surface (ground contact),
-    # not to the rim. A 1.5 in / 0.0381 tape read on 2026-11-05 was to the rim;
-    # plus a ~3/8 in tread that gives 0.0476, matching this recorded value.
-    wheel_radius: 0.04756     # 95.11mm rolling diameter
+    # not the rim. 52.74mm by digital caliper 2026-11-05 = 105.5mm / 4.15 in
+    # across, a nominal 4 in wheel. Supersedes 0.04756 (3.74 in, matches no
+    # stock size) and a 0.0381 tape read that stopped at the rim.
+    # Caliper is UNLOADED, so the loaded rolling radius is slightly smaller and
+    # this will over-report distance a little. Confirm with the 2m drive test.
+    wheel_radius: 0.05274     # 105.48mm dia, caliper
     
     # Multipliers for fine-tuning (1.0 = no adjustment)
     wheel_separation_multiplier: 1.0

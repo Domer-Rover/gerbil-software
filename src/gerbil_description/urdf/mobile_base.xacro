@@ -16,15 +16,22 @@
     <xacro:property name="base_height" value="${base_clearance + base_thickness}" />
     <xacro:property name="base_mass" value="6.8" />           <!-- ~15 lbs -->
 
-    <!-- ROLLING radius: centre of the axle to the OUTER surface of the tread,
-         i.e. the ground contact patch - NOT to the rim. Distance per
-         revolution is 2*pi*r measured at the contact patch, so anything short
-         of the tread surface under-reports travel.
-         Resolved 2026-11-05: a tape read of 1.5 in / 0.0381 was to the RIM.
-         0.0381 + ~0.0095 (a 3/8 in rubber tread) = 0.0476, which is the
-         recorded 0.04756, so the two readings agree and this value stands.
-         Scales wheel odometry linearly; confirm with the 2m drive test. -->
-    <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm rolling diameter -->
+    <!-- ROLLING radius: axle centre to the OUTER surface of the tread, i.e.
+         the ground contact patch - NOT the rim. Distance per revolution is
+         2*pi*r taken at the contact patch, so anything short of the tread
+         surface under-reports travel.
+         52.74mm by digital caliper, 2026-11-05. That is 105.5mm / 4.15 in
+         across, i.e. a nominal 4 in wheel. History of this value:
+           0.0381   a tape read to the RIM, 10mm short of the tread
+           0.04756  recorded as "95.11mm diameter"; 3.74 in matches no stock
+                    wheel size and is 5mm under the caliper
+           0.05274  caliper, UNLOADED  <- current
+         The caliper figure is unloaded, so the true LOADED rolling radius is a
+         little smaller as the tread compresses under the rover's weight. That
+         makes this a slight over-estimate, and the robot will report having
+         travelled marginally further than it did. The 2m drive test is still
+         the final word: scale by actual/reported. -->
+    <xacro:property name="wheel_radius" value="0.05274" />    <!-- 105.48mm dia, caliper -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
     <!-- Deck underside in base_link coords (base_link z=0 is the axle plane).
