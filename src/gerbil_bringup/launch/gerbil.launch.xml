@@ -1,6 +1,11 @@
 <launch>
     <!-- ==================== ARGUMENTS ==================== -->
-    <arg name="use_mock_hardware" default="true" />
+    <!-- false = talk to the real RoboClaw. Was true, which meant launching
+         this file DIRECTLY (rather than via the foxglove/nav2 wrappers, which
+         both already pass false) gave a simulated robot with no warning:
+         wheels still, odometry integrating perfectly, real /scan. Defaults
+         should give the real robot; ask for the simulation explicitly. -->
+    <arg name="use_mock_hardware" default="false" />
     <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
     <arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <arg name="lidar_port" default="/dev/gerbil_lidar" />  <!-- needs udev/99-gerbil.rules installed -->
