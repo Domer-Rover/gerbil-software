@@ -23,13 +23,25 @@
 
     <!-- ==================== ROBOT STATE PUBLISHER ==================== -->
     <node pkg="robot_state_publisher" exec="robot_state_publisher">
-        <param name="robot_description"
+        <!-- type="str" is REQUIRED. Without it launch parses this value with
+             YAML rules, and xacro copies XML comments through into the
+             generated URDF, so a single ": " inside any comment (e.g.
+             "Acrylic deck: a thin plate") makes YAML read it as a mapping key
+             and the whole launch fails with "Failed to convert ... using yaml
+             rules". type="str" passes the URDF through verbatim. -->
+        <param name="robot_description" type="str"
                value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
     </node>
 
     <!-- ==================== ROS2 CONTROL ==================== -->
     <node pkg="controller_manager" exec="ros2_control_node" output="screen">
-        <param name="robot_description"
+        <!-- type="str" is REQUIRED. Without it launch parses this value with
+             YAML rules, and xacro copies XML comments through into the
+             generated URDF, so a single ": " inside any comment (e.g.
+             "Acrylic deck: a thin plate") makes YAML read it as a mapping key
+             and the whole launch fails with "Failed to convert ... using yaml
+             rules". type="str" passes the URDF through verbatim. -->
+        <param name="robot_description" type="str"
                value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
         <param from="$(find-pkg-share gerbil_bringup)/config/gerbil_controllers.yaml" />
     </node>
