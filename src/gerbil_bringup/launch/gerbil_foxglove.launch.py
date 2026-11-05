@@ -27,11 +27,6 @@ def generate_launch_description():
         description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 
-    use_joystick_arg = DeclareLaunchArgument(
-        'use_joystick',
-        default_value='false',
-    )
-
     launch_lidar_arg = DeclareLaunchArgument(
         'launch_lidar',
         default_value='true',
@@ -62,7 +57,6 @@ def generate_launch_description():
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
             'launch_zed': LaunchConfiguration('launch_zed'),
-            'use_joystick': LaunchConfiguration('use_joystick'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_gps': LaunchConfiguration('launch_gps'),
             'launch_lidar': LaunchConfiguration('launch_lidar'),
@@ -88,7 +82,6 @@ def generate_launch_description():
         use_mock_hardware_arg,
         launch_zed_arg,
         use_duty_cycle_arg,
-        use_joystick_arg,
         launch_lidar_arg,
         launch_gps_arg,
         foxglove_port_arg,

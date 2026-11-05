@@ -27,12 +27,6 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    use_joystick_arg = DeclareLaunchArgument(
-        'use_joystick',
-        default_value='true',
-        description='Joystick override (recommended outdoors)'
-    )
-
     launch_gps_arg = DeclareLaunchArgument(
         'launch_gps',
         default_value='false',
@@ -68,7 +62,6 @@ def generate_launch_description():
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
             'launch_zed': 'true',
-            'use_joystick': LaunchConfiguration('use_joystick'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_lidar': 'true',
             'launch_gps': LaunchConfiguration('launch_gps'),
@@ -152,7 +145,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         use_mock_hardware_arg,
-        use_joystick_arg,
         use_duty_cycle_arg,
         launch_gps_arg,
         foxglove_port_arg,

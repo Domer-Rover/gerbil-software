@@ -9,7 +9,6 @@
     <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
     <arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <arg name="lidar_port" default="/dev/gerbil_lidar" />  <!-- needs udev/99-gerbil.rules installed -->
-    <arg name="use_joystick" default="false" description="joy_node + teleop_twist_joy, publishing to /cmd_vel_joy" />
     <arg name="use_twist_mux" default="true" description="arbitrate joystick / keyboard / nav2. Needs ros-humble-twist-mux. Turn OFF only to drive a single source straight into the controller." />
     <arg name="launch_lidar" default="true" />
     <arg name="launch_gps" default="false" />
@@ -104,34 +103,19 @@
         </node>
     </group>
 
-    <!-- ==================== JOYSTICK TELEOP ==================== -->
-    <!-- Hold L1 (button 4) as the deadman, left stick to drive.
-         Scales are kept IDENTICAL to the keyboard teleop command documented in
-         README/launch docs so the robot feels the same either way:
-           linear  0.3 m/s, angular 1.0 rad/s
-         Note these are also capped by diff_drive_controller's own
-         linear.x.max_velocity (0.3) and angular.z.max_velocity (0.5), so the
-         angular scale is in practice clamped to 0.5 rad/s. -->
-    <group if="$(var use_joystick)">
-        <node pkg="joy" exec="joy_node" name="joy_node" output="screen">
-            <!-- Republish at a steady rate so twist_mux does not see the
-                 joystick go stale between stick movements while held. -->
-            <param name="autorepeat_rate" value="20.0" />
-            <param name="deadzone" value="0.05" />
-        </node>
-        <node pkg="teleop_twist_joy" exec="teleop_node" name="teleop_twist_joy" output="screen">
-            <param name="enable_button" value="4" />
-            <param name="axis_linear.x" value="1" />
-            <param name="axis_angular.yaw" value="0" />
-            <param name="scale_linear.x" value="0.3" />
-            <param name="scale_angular.yaw" value="1.0" />
-            <!-- Always goes to the mux topic, never straight to the
-                 controller. With use_twist_mux:=false nothing forwards
-                 /cmd_vel_joy, so the joystick is inert - that flag is for
-                 isolating a single source, not for manual driving. -->
-            <remap from="cmd_vel" to="/cmd_vel_joy" />
-        </node>
-    </group>
+    <!-- ==================== TELEOP ====================
+         Neither joystick nor keyboard teleop is launched here. Both need a
+         terminal of their own: teleop_twist_keyboard reads raw stdin, and the
+         joystick is plugged in and unplugged independently of the robot stack,
+         so restarting everything to attach a pad was wasteful. Run whichever
+         you want in a second terminal:
+
+           ros2 run gerbil_bringup teleop_keyboard.sh
+           ros2 run gerbil_bringup teleop_joystick.sh
+
+         Both publish to their twist_mux input topic and share their speed
+         settings from scripts/teleop_common.sh, so they feel identical.
+         twist_mux above is what forwards them to the controller. -->
 
     <!-- ==================== KEYBOARD TELEOP ==================== -->
     <!-- Deliberately NOT launched here. teleop_twist_keyboard reads raw stdin,
