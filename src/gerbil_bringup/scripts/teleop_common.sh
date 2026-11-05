@@ -10,6 +10,15 @@
 # yields 0.5 on the robot. Raise BOTH if you want more; raising only this one
 # changes nothing.
 
+# colcon's generated setup.bash references COLCON_TRACE and other variables
+# without defining them, so it aborts under `set -u` with
+#   setup.bash: line 11: COLCON_TRACE: unbound variable
+# Disable -u for the duration of the sourcing, then restore whatever the
+# calling script had. Same for -e: these scripts return non-zero harmlessly.
+_had_u=0; case "$-" in *u*) _had_u=1;; esac
+_had_e=0; case "$-" in *e*) _had_e=1;; esac
+set +u +e
+
 # Make `ros2` available even in a fresh terminal that was never sourced.
 if ! command -v ros2 >/dev/null 2>&1; then
     [ -f /opt/ros/humble/setup.bash ] && . /opt/ros/humble/setup.bash
@@ -22,6 +31,11 @@ if [ -f "$_WS/install/setup.bash" ]; then
 elif [ -f "$HOME/gerbil-software/install/setup.bash" ]; then
     . "$HOME/gerbil-software/install/setup.bash"
 fi
+
+# Restore the caller's shell options now that sourcing is done.
+[ "$_had_u" = 1 ] && set -u
+[ "$_had_e" = 1 ] && set -e
+unset _had_u _had_e
 
 if ! command -v ros2 >/dev/null 2>&1; then
     echo "ERROR: ros2 not on PATH and no setup.bash found. Source your workspace first." >&2
