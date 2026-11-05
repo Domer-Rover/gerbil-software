@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <!-- ROBOT DIMENSIONS -->
-    <!-- +X is forward. Drive wheels and ZED camera are at the front (+X);
+    <!-- +X is forward. Drive wheels and ZED camera are at the front (+X).
          the caster trails at the rear (-X). Confirmed on hardware 2026-11-03. -->
     <xacro:property name="base_length" value="0.6096" />      <!-- 24 inches -->
     <xacro:property name="base_width" value="0.3048" />       <!-- 12 inches -->
@@ -11,7 +11,7 @@
          measurements. base_link z=0 remains the wheel axle plane. -->
     <xacro:property name="base_thickness" value="0.00508" />   <!-- 0.2 in acrylic plate, measured 2026-11-05 -->
     <xacro:property name="base_clearance" value="0.0635" />    <!-- 2.5 in, ground to plate underside -->
-    <!-- Kept as an alias so nothing downstream breaks; it is the TOP surface
+    <!-- Kept as an alias so nothing downstream breaks. It is the TOP surface
          of the deck above the ground, which is what sensors mount to. -->
     <xacro:property name="base_height" value="${base_clearance + base_thickness}" />
     <xacro:property name="base_mass" value="6.8" />           <!-- ~15 lbs -->
@@ -23,7 +23,7 @@
          52.74mm by digital caliper, 2026-11-05. That is 105.5mm / 4.15 in
          across, i.e. a nominal 4 in wheel. History of this value:
            0.0381   a tape read to the RIM, 10mm short of the tread
-           0.04756  recorded as "95.11mm diameter"; 3.74 in matches no stock
+           0.04756  recorded as "95.11mm diameter". 3.74 in matches no stock
                     wheel size and is 5mm under the caliper
            0.05274  caliper, UNLOADED  <- current
          The caliper figure is unloaded, so the true LOADED rolling radius is a
@@ -43,7 +43,7 @@
 
     <!-- SENSOR STACK AT THE FRONT (measured 2026-11-05)
          The ZED2i sits in a 3D-printed mould on the deck, flush with the front
-         edge; the LD19 LIDAR sits directly on top of that mould, ~1mm above
+         edge. The LD19 LIDAR sits directly on top of that mould, ~1mm above
          the camera body. Deck top surface, in base_link coords, is
          deck_z + base_thickness. -->
     <xacro:property name="deck_top" value="${deck_z + base_thickness}" />
@@ -82,7 +82,7 @@
     <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
 
     <!-- DRIVE RAIL ASSEMBLY (under the acrylic chassis, in a T)
-         The long arm of the T runs fore-aft down the centreline; the top of
+         The long arm of the T runs fore-aft down the centreline. The top of
          the T is a transverse rail at the front carrying both motors. The
          motor bodies run inboard under the chassis and their output shafts
          protrude past the chassis sides, which is why wheel_separation
@@ -186,7 +186,7 @@
         <!-- ON-DECK COMPONENTS, back to front, as described 2026-11-05.
              Added as extra <visual> on base_link rather than as new links, so
              they do not clutter the TF tree. Footprint positions are
-             ESTIMATES from the verbal layout; only the overall front-to-back
+             ESTIMATES from the verbal layout. Only the overall front-to-back
              ORDER is confirmed. Sizes are rough. No <collision> on these: the
              deck slab already covers the Nav2 footprint, and duplicating it
              would only slow collision checking. -->
@@ -235,7 +235,7 @@
         <inertial>
             <mass value="${base_mass}" />
             <!-- Inertia treats the whole loaded deck as one slab of height
-                 base_height; that is coarser than the geometry above but is a
+                 base_height, which is coarser than the geometry above but is a
                  better match to the real mass distribution than a bare plate,
                  and ros2_control does not use it for a diff-drive base. -->
             <origin xyz="0 0 ${deck_top + base_height / 2.0}" rpy="0 0 0" />
@@ -419,7 +419,7 @@
          scan is then drawn in the LIDAR's own orientation, so the angle an
          object directly in front appears at IS the mounting offset. Set yaw to
          the negative of that angle. Previous guesses were -1.5708 (inherited
-         from Capybara) and +1.5708; neither was ever confirmed.
+         from Capybara) and +1.5708. Neither was ever confirmed.
          laser_filter.yaml's angular bounds are coupled to this value and its
          front-180 crop is disabled until the yaw is known.
          XYZ measured 2026-11-05: 1.5 in back from the front edge, scan plane
