@@ -95,7 +95,12 @@ def generate_launch_description():
         name='controller_server',
         output='screen',
         parameters=[nav2_params],
-        remappings=[('cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        # Nav2 publishes to the twist_mux input, NOT straight to the
+        # controller. twist_mux gives navigation priority 10, so a
+        # joystick (100) or keyboard (90) command preempts it instantly.
+        # Previously this remapped onto the controller topic directly,
+        # alongside teleop, and the robot obeyed whichever arrived last.
+        remappings=[('cmd_vel', '/cmd_vel_nav')],
     )
 
     planner_server = Node(
@@ -112,7 +117,12 @@ def generate_launch_description():
         name='behavior_server',
         output='screen',
         parameters=[nav2_params],
-        remappings=[('cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        # Nav2 publishes to the twist_mux input, NOT straight to the
+        # controller. twist_mux gives navigation priority 10, so a
+        # joystick (100) or keyboard (90) command preempts it instantly.
+        # Previously this remapped onto the controller topic directly,
+        # alongside teleop, and the robot obeyed whichever arrived last.
+        remappings=[('cmd_vel', '/cmd_vel_nav')],
     )
 
     bt_navigator = Node(
