@@ -17,6 +17,25 @@
          the caster trails at the rear (-X). Confirmed on hardware 2026-11-03. -->
     <xacro:property name="base_length" value="0.6096" />      <!-- 24 inches -->
     <xacro:property name="base_width" value="0.3048" />       <!-- 12 inches -->
+
+    <!-- ORIGIN OF base_link, moved 2026-11-06.
+         base_link now sits at the WHEEL AXLE MIDPOINT, not the geometric
+         centre of the chassis. diff_drive_controller computes v and omega
+         about the axle midpoint and publishes that as the pose of
+         base_frame_id, and no offset parameter exists anywhere in the chain,
+         so any other choice makes the stack claim the rover pivots about a
+         point it does not. With base_link at the chassis centre the error was
+         0.2448 m, which turned a 90 degree in-place rotation into 0.346 m of
+         unmodelled translation.
+         axle_from_front is the ONLY number to change if the wheels move or
+         get re-measured. Everything else is derived from it.
+         WARNING - 0.06 is an ESTIMATE inherited from the original URDF, never
+         tape-measured. Measure front edge of the acrylic to the centre of the
+         wheel axle and correct it. Every offset below shifts with it. -->
+    <xacro:property name="axle_from_front" value="0.06" />
+    <!-- Chassis centre expressed in the new base_link frame. Negative because
+         the rover trails its own axle. -->
+    <xacro:property name="chassis_x" value="${-(base_length / 2.0 - axle_from_front)}" />
     <!-- base_height USED to mean two things at once - the acrylic plate's own
          thickness AND its height off the ground. Split 2026-11-05 after tape
          measurements. base_link z=0 remains the wheel axle plane. -->
@@ -55,7 +74,7 @@
     <xacro:property name="deck_z" value="${base_clearance - wheel_radius}" />
     <xacro:property name="caster_radius" value="0.0254" />    <!-- 1 in -->
     <!-- Caster is screwed under the deck 2 in in from the rear edge -->
-    <xacro:property name="caster_x" value="${-(base_length / 2.0 - 0.0508)}" />
+    <xacro:property name="caster_x" value="${chassis_x - (base_length / 2.0 - 0.0508)}" />
 
     <!-- SENSOR STACK AT THE FRONT (measured 2026-11-05)
          The ZED2i sits in a 3D-printed mould on the deck, flush with the front
@@ -64,7 +83,7 @@
          deck_z + base_thickness. -->
     <xacro:property name="deck_top" value="${deck_z + base_thickness}" />
     <!-- LIDAR puck centre is 1.5 in back from the front edge -->
-    <xacro:property name="lidar_x" value="${base_length / 2.0 - 0.0381}" />
+    <xacro:property name="lidar_x" value="${chassis_x + base_length / 2.0 - 0.0381}" />
     <!-- Scan plane is 6 in above the deck, and this is the LIDAR's frame
          origin -
          ranges are measured from here, so it must be the scan slot, not the
@@ -75,7 +94,7 @@
          front edge to leave the front face flush. -->
     <xacro:property name="camera_depth" value="0.033" />
     <xacro:property name="camera_height" value="0.030" />
-    <xacro:property name="camera_x" value="${base_length / 2.0 - camera_depth / 2.0}" />
+    <xacro:property name="camera_x" value="${chassis_x + base_length / 2.0 - camera_depth / 2.0}" />
     <!-- 1mm clearance between the camera top and the LIDAR housing underside -->
     <xacro:property name="camera_z" value="${lidar_z - lidar_housing_length / 2.0 - 0.001 - camera_height / 2.0}" />
     <!-- The printed mould fills the gap from the deck up to the camera -->
@@ -102,7 +121,10 @@
     <xacro:property name="wheel_separation" value="0.44" />
 
     <!-- Wheel X position - near front edge of chassis -->
-    <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
+    <!-- Zero by definition now - base_link IS the axle midpoint. Kept as a
+         named property so the wheel, rail and motor joints below still read
+         as "at the axle" rather than as a bare 0. -->
+    <xacro:property name="wheel_x_offset" value="0" />
 
     <!-- DRIVE RAIL ASSEMBLY (under the acrylic chassis, in a T)
          The long arm of the T runs fore-aft down the centreline. The top of
@@ -135,14 +157,14 @@
             <geometry>
                 <box size="${base_length} ${base_width} ${base_thickness}" />
             </geometry>
-            <origin xyz="0 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
+            <origin xyz="${chassis_x} 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
             <material name="grey" />
         </visual>
         <collision>
             <geometry>
                 <box size="${base_length} ${base_width} ${base_thickness}" />
             </geometry>
-            <origin xyz="0 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
+            <origin xyz="${chassis_x} 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
         </collision>
 
         <!-- T-rail long arm, down the centreline, running back from the
@@ -218,7 +240,7 @@
             <geometry>
                 <box size="0.11 0.09 0.05" />
             </geometry>
-            <origin xyz="-0.21 -0.07 ${deck_top + 0.025}" rpy="0 0 0" />
+            <origin xyz="${chassis_x - 0.21} -0.07 ${deck_top + 0.025}" rpy="0 0 0" />
             <material name="black" />
         </visual>
         <!-- DC-DC converter, immediately to the left of the Jetson (+Y) -->
@@ -226,7 +248,7 @@
             <geometry>
                 <box size="0.10 0.07 0.04" />
             </geometry>
-            <origin xyz="-0.21 0.07 ${deck_top + 0.020}" rpy="0 0 0" />
+            <origin xyz="${chassis_x - 0.21} 0.07 ${deck_top + 0.020}" rpy="0 0 0" />
             <material name="black" />
         </visual>
         <!-- RoboClaw 2x60A, forward of the Jetson/converter pair -->
@@ -234,7 +256,7 @@
             <geometry>
                 <box size="0.10 0.10 0.03" />
             </geometry>
-            <origin xyz="-0.07 0 ${deck_top + 0.015}" rpy="0 0 0" />
+            <origin xyz="${chassis_x - 0.07} 0 ${deck_top + 0.015}" rpy="0 0 0" />
             <material name="black" />
         </visual>
         <!-- 12V battery in its printed mould, forward of the RoboClaw -->
@@ -242,7 +264,7 @@
             <geometry>
                 <box size="0.17 0.09 0.08" />
             </geometry>
-            <origin xyz="0.08 0 ${deck_top + 0.040}" rpy="0 0 0" />
+            <origin xyz="${chassis_x + 0.08} 0 ${deck_top + 0.040}" rpy="0 0 0" />
             <material name="blue" />
         </visual>
         <!-- Printed mould carrying the ZED2i, at the front edge. Its height is
@@ -261,7 +283,7 @@
                  base_height, which is coarser than the geometry above but is a
                  better match to the real mass distribution than a bare plate,
                  and ros2_control does not use it for a diff-drive base. -->
-            <origin xyz="0 0 ${deck_top + base_height / 2.0}" rpy="0 0 0" />
+            <origin xyz="${chassis_x} 0 ${deck_top + base_height / 2.0}" rpy="0 0 0" />
             <inertia ixx="${(1/12) * base_mass * (base_width*base_width + base_height*base_height)}"
                      ixy="0" ixz="0"
                      iyy="${(1/12) * base_mass * (base_length*base_length + base_height*base_height)}"
@@ -426,7 +448,7 @@
     <joint name="imu_joint" type="fixed">
         <parent link="base_link" />
         <child link="imu_link" />
-        <origin xyz="0 0 ${deck_z + base_thickness + 0.005}" rpy="0 0 0" />
+        <origin xyz="${chassis_x} 0 ${deck_z + base_thickness + 0.005}" rpy="0 0 0" />
     </joint>
 
     <!-- ZED camera at the front edge, on top of the chassis, facing forward (+X) -->

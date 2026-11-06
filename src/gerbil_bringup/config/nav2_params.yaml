@@ -152,14 +152,13 @@ global_costmap:
       # Half-width 0.24: with wheel_separation 0.44 the outer tyre faces reach
       # 0.44/2 + 0.03195/2 = 0.236, so the old 0.23 cut the wheels out of the
       # footprint and Nav2 would have planned paths that clipped them.
-      # MEASURED, no longer an estimate. Chassis 0.6096 long so +/-0.3048,
-      # rounded to 0.31. Wheel span is separation 0.44 + one tyre width 0.032
-      # = outer faces at 0.236, so +/-0.24 to enclose the wheels.
-      # NOTE this polygon is expressed about base_link, which currently sits at
-      # the CHASSIS CENTRE while the rover actually pivots about the wheel
-      # axle 0.2448 m forward. Until base_link is moved there, Nav2 is
-      # collision-checking the wrong pivot.
-      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"
+      # Expressed about base_link, which sits at the WHEEL AXLE MIDPOINT, so
+      # this polygon is strongly asymmetric - the rover trails its own axle.
+      #   chassis    x from -0.5496 to +0.0600   (centre at chassis_x -0.2448)
+      #   wheel span y +/-0.2360                 (separation 0.44 + tyre 0.032)
+      # Rounded outward for margin. Derived in mobile_base.xacro - if
+      # axle_from_front changes there, recompute these four corners.
+      footprint: "[[-0.55, -0.24], [-0.55, 0.24], [0.07, 0.24], [0.07, -0.24]]"
       resolution: 0.05
       rolling_window: true
       width: 20                      # indoor rooms/hallways
@@ -186,7 +185,26 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.45         # must exceed the circumscribed radius (0.39 m for this footprint)
+        # 0.62, just over the CIRCUMSCRIBED radius of 0.6001. That is large,
+        # and deliberately so. Because base_link is at the axle the footprint
+        # is asymmetric, giving an inscribed radius of only 0.07 - and the
+        # costmap only marks cells as definitely-colliding within the
+        # INSCRIBED radius. SmacPlanner2D plans for a point and takes all its
+        # clearance from inflation, so a small value would let it route the
+        # origin 10cm from a wall while 0.55 m of tail swung into it.
+        #
+        # This is also physically honest: use_rotate_to_heading is true, so
+        # the rover may turn in place anywhere along the path, and turning in
+        # place sweeps a 0.60 m radius circle. It genuinely needs ~1.2 m of
+        # clear space to turn.
+        #
+        # CONSEQUENCE: standard 0.8 m doorways are effectively impassable and
+        # the rover wants wide corridors. The real fix is mechanical - moving
+        # the drive wheels rearward toward the chassis middle would roughly
+        # halve the swept radius and make the footprint symmetric again. The
+        # software alternative is SmacPlannerLattice, which does full SE2
+        # footprint collision checking instead of point-plus-inflation.
+        inflation_radius: 0.62
         cost_scaling_factor: 2.5       # sharper falloff, less pink spread
         inflate_unknown: false
         inflate_around_unknown: true
@@ -209,14 +227,13 @@ local_costmap:
       # Half-width 0.24: with wheel_separation 0.44 the outer tyre faces reach
       # 0.44/2 + 0.03195/2 = 0.236, so the old 0.23 cut the wheels out of the
       # footprint and Nav2 would have planned paths that clipped them.
-      # MEASURED, no longer an estimate. Chassis 0.6096 long so +/-0.3048,
-      # rounded to 0.31. Wheel span is separation 0.44 + one tyre width 0.032
-      # = outer faces at 0.236, so +/-0.24 to enclose the wheels.
-      # NOTE this polygon is expressed about base_link, which currently sits at
-      # the CHASSIS CENTRE while the rover actually pivots about the wheel
-      # axle 0.2448 m forward. Until base_link is moved there, Nav2 is
-      # collision-checking the wrong pivot.
-      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"
+      # Expressed about base_link, which sits at the WHEEL AXLE MIDPOINT, so
+      # this polygon is strongly asymmetric - the rover trails its own axle.
+      #   chassis    x from -0.5496 to +0.0600   (centre at chassis_x -0.2448)
+      #   wheel span y +/-0.2360                 (separation 0.44 + tyre 0.032)
+      # Rounded outward for margin. Derived in mobile_base.xacro - if
+      # axle_from_front changes there, recompute these four corners.
+      footprint: "[[-0.55, -0.24], [-0.55, 0.24], [0.07, 0.24], [0.07, -0.24]]"
       plugins: ["obstacle_layer", "inflation_layer"]   # add a ZED pointcloud voxel_layer here once LIDAR-only baseline is proven
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -239,7 +256,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.45
+        inflation_radius: 0.62         # see the global_costmap note above
         cost_scaling_factor: 2.5
         inflate_unknown: false
         inflate_around_unknown: true
