@@ -50,14 +50,30 @@ POS_MAX =  2_000_000_000
 # ── Per-motor config (replace with your Motion Studio auto-tune values) ──────
 # Same layout as old_scripts/set_pid.py. velocity.qpps is only used with --no-test; a
 # normal run measures it.
+# Velocity PID as produced by Motion Studio's auto-tune on 2026-11-05 and
+# saved to the board's NVM. Read back off the board, NOT transcribed from the
+# GUI. Supersedes P=10.44217 / I=0.62657 / QPPS=4290, which were placeholders:
+# the identical P and I on both channels were the giveaway that no per-motor
+# tune had ever run, and 4290 was roughly 40% of the real QPPS.
+#
+# d is 0.0 on BOTH channels and that is correct, not an omission. Derivative
+# action on an encoder-derived velocity amplifies quantisation noise, so a
+# velocity loop is normally run as PI. The earlier thrashing came from P being
+# twice too high, not from the missing D.
+#
+# QPPS is a MEASUREMENT (counts/sec at full power), not a gain. It was taken
+# unloaded on a 25.2V pack, so it is an upper bound: under load the wheels
+# cannot reach it and the PI terms make up the difference.
+# M1 10560 vs M2 11220 is a 6.3% spread, down from 7.7%. Each wheel closes its
+# own loop, so velocity PID absorbs most of what made the rover curve left.
 MOTORS = {
     "M1": {
-        "velocity": {"p": 10.44217, "i": 0.62657, "d": 0.0, "qpps": 4290},
+        "velocity": {"p": 5.09039, "i": 0.27892, "d": 0.0, "qpps": 10560},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
     "M2": {
-        "velocity": {"p": 10.44217, "i": 0.62657, "d": 0.0, "qpps": 4290},
+        "velocity": {"p": 5.24083, "i": 0.35532, "d": 0.0, "qpps": 11220},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
