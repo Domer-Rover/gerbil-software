@@ -19,7 +19,12 @@ diff_drive_controller:
     right_wheel_names: ["base_right_wheel_joint"]
     # These two are the ONLY copies that affect odometry: the xacro's values
     # are for visualisation and TF. Keep them in sync by hand.
-    wheel_separation: 0.44    # 440mm tread-centre to tread-centre, tape 2026-11-05
+    # VERIFIED BY SPIN TEST 2026-11-05: one full revolution, judged a shade
+    # over 360 deg, measured 363.81 deg from unwrapped pose and 363.78 from
+    # integrated angular.z -- two independent methods 0.03 deg apart. ZED read
+    # 362.75. A ZED-referenced correction would be 0.4413, a 0.3% change and
+    # below the test's resolution, so 0.44 stands.
+    wheel_separation: 0.44    # 440mm tread-centre to tread-centre
     # ROLLING radius, CALIBRATED BY DRIVE TEST 2026-11-05, which is the only
     # measurement that counts: a tape-measured 3.000 m drive was reported as
     # 3.3370 m, 11.2% over, so 0.05274 * (3.000/3.3370) = 0.04741.
