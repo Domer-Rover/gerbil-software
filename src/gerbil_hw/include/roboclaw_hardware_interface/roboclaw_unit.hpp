@@ -36,7 +36,8 @@ public:
     MotorJoint::SharedPtr m2, bool use_duty_cycle = false);
 
   // Read the encoder counts from the roboclaw and update position state
-  void read();
+  // dt is the control-loop period in seconds, used for velocity state
+  void read(const double dt = 0.0);
 
   // Convert the velocity command to motor command and write to the roboclaw.
   void write();

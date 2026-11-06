@@ -44,7 +44,7 @@ RoboClawUnit::RoboClawUnit(
 }
 
 // Read the encoder counts from the roboclaw and update position state
-void RoboClawUnit::read()
+void RoboClawUnit::read(const double dt)
 {
   try {
     // Read both encoders in single transaction
@@ -53,10 +53,10 @@ void RoboClawUnit::read()
 
     // Convert tick counts to position states
     if (joints[0]) {
-      joints[0]->setPositionState(m1_ticks);
+      joints[0]->setPositionState(m1_ticks, dt);
     }
     if (joints[1]) {
-      joints[1]->setPositionState(m2_ticks);
+      joints[1]->setPositionState(m2_ticks, dt);
     }
   } catch (const std::exception & e) {
     auto now = std::chrono::steady_clock::now();

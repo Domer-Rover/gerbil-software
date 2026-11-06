@@ -107,6 +107,10 @@ std::vector<StateInterface> RoboClawHardwareInterface::export_state_interfaces()
     for (auto & joint : roboclaw.joints) {
       if (joint) {
         state_interfaces.emplace_back(joint->name, "position", joint->getPositionStatePtr());
+        // Velocity was previously NOT exported, so joint_state_broadcaster
+        // published NaN velocities. diff_drive_controller masked it by
+        // differencing position itself, so odometry was unaffected.
+        state_interfaces.emplace_back(joint->name, "velocity", joint->getVelocityStatePtr());
       }
     }
   }
@@ -134,10 +138,11 @@ return_type RoboClawHardwareInterface::write(const rclcpp::Time &, const rclcpp:
   return return_type::OK;
 }
 
-return_type RoboClawHardwareInterface::read(const rclcpp::Time &, const rclcpp::Duration &)
+return_type RoboClawHardwareInterface::read(
+  const rclcpp::Time &, const rclcpp::Duration & period)
 {
   for (auto & roboclaw : roboclaw_units_) {
-    roboclaw.read();
+    roboclaw.read(period.seconds());
   }
   return return_type::OK;
 }
