@@ -57,6 +57,13 @@
             <arg name="publish_urdf" value="true" />
             <arg name="publish_tf" value="false" />  <!-- EKF owns odom -> base_footprint -->
             <arg name="publish_map_tf" value="false" />
+            <!-- Our deviations from the VENDORED zed config. The wrapper loads
+                 common_stereo.yaml then zed2i.yaml, both under
+                 src/vendors/zed_wrapper and both overwritten by an SDK or
+                 wrapper upgrade, so settings edited into them revert silently.
+                 This file is appended last and wins over both. -->
+            <arg name="ros_params_override_path"
+                 value="$(find-pkg-share gerbil_bringup)/config/zed_override.yaml" />
         </include>
     </group>
 

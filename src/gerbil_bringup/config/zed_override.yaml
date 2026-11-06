@@ -1,0 +1,79 @@
+# Gerbil's deviations from the vendored ZED configuration.
+#
+# WHY THIS FILE EXISTS: zed_camera.launch.py loads common_stereo.yaml then
+# <model>.yaml, both of which live under src/vendors/zed_wrapper/ and are
+# OVERWRITTEN by an SDK or wrapper upgrade. Settings we rely on were edited
+# directly into those files, so an upgrade would silently revert them and the
+# symptom would be VIO behaving differently with no commit to blame.
+#
+# The launch appends this file LAST in the node's parameter list, so it wins
+# over both. Put ONLY intentional deviations here, each with its reason, and
+# leave everything else to the vendored defaults.
+#
+# Passed from gerbil.launch.xml as ros_params_override_path.
+
+/**:
+    ros__parameters:
+        general:
+            # HD720 at 30 fps. More pixels give more trackable features, but
+            # frame rate matters more to VIO than resolution does: dropped
+            # frames break feature tracking, which is what causes scale drift.
+            # 60 fps roughly doubles GPU load and only helps fast motion.
+            grab_resolution: 'HD720'
+            grab_frame_rate: 30
+
+            # Image publishing rate, NOT the VIO rate. Odometry follows
+            # grab_frame_rate and was measured at ~25-27 Hz. This only affects
+            # what we watch in Foxglove, so it is kept low to leave bandwidth
+            # and CPU for navigation.
+            pub_frame_rate: 15.0
+
+        depth:
+            # NEURAL_LIGHT is the cheapest of the neural tiers. Do NOT set
+            # 'NONE': the SDK's positional tracking depends on depth, so that
+            # would kill VIO and with it the odom1 input to the EKF.
+            # Neural modes handle low-texture and repetitive scenes better than
+            # the older stereo matchers, which matters for sand.
+            # NEURAL or NEURAL_PLUS would improve depth precision but cost
+            # frame rate on an Orin Nano, and losing frames hurts VIO more than
+            # coarse depth does. Measure the grab rate before changing tier.
+            depth_mode: 'NEURAL_LIGHT'
+            min_depth: 0.2       # ZED2i physical minimum
+            max_depth: 15.0
+
+            # The point cloud is computed lazily -- the wrapper advertises the
+            # topic but only does the work while something subscribes. Nothing
+            # in Nav2 subscribes (local_costmap runs obstacle_layer only), so
+            # this costs nothing unless a Foxglove panel is open. Left enabled
+            # for that reason.
+            point_cloud_freq: 10.0
+            point_cloud_res: 'COMPACT'
+            publish_point_cloud: true
+
+        pos_tracking:
+            pos_tracking_enabled: true
+
+            # The EKF in gerbil_bringup owns odom -> base_footprint. Exactly
+            # one node may publish a given transform, so both of these must
+            # stay false. gerbil.launch.xml also passes them as launch
+            # arguments; they are repeated here so the file is correct on its
+            # own if the launch ever stops passing them.
+            publish_tf: false
+            publish_map_tf: false
+
+            # Fuse the camera's own IMU into its visual odometry. This is what
+            # makes the output visual-INERTIAL rather than visual-only, and it
+            # is why ZED's rotation estimate agreed with the wheels to 0.29%
+            # on the spin test while its translation scale drifted.
+            # NOTE this is also why the ZED IMU must not be fused separately
+            # into the robot_localization EKF: it is already inside this
+            # odometry, and fusing both would double-count one sensor and make
+            # the filter overconfident. An independent IMU is what the EKF
+            # wants, which is the BNO055 once its covariances are fixed.
+            imu_fusion: true
+
+            # Loop closure against a remembered area. Off deliberately: it can
+            # make the pose JUMP when it recognises a place, and the EKF reads
+            # velocities only, so a jump appears as a large false velocity
+            # spike rather than a helpful correction.
+            area_memory: false
