@@ -15,7 +15,27 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom             # odom-frame EKF; a second instance handles map/GPS later
 
-    # Wheel odometry: trust the forward speed and yaw rate, not the integrated pose
+    # SOURCE SPLIT, calibrated 2026-11-05. Each source supplies only what it
+    # measures well, established by two drive tests:
+    #
+    #   3 m straight   wheel 3.0184 (+0.6% vs tape)   ZED 2.7628 (-7.9%)
+    #   360 deg spin   wheel 363.81               ZED 362.75  (0.29% apart)
+    #
+    # So the wheels are the authority on forward speed and the two agree almost
+    # exactly on rotation. ZED's translation SCALE is the weak axis: a long
+    # corridor has flat parallel walls and almost no usable parallax, so visual
+    # scale drifts while rotation stays well constrained by the gyro and
+    # optical flow. No ZED health flag fires for this.
+    #
+    # Previously BOTH sources supplied vx, which averaged ZED's 8% error into a
+    # good wheel estimate: /odometry/filtered read 2.74 m on a 3.00 m drive.
+    #
+    # REVISIT THIS OUTDOORS. On URC terrain the balance inverts: wheels slip on
+    # sand and gravel while a textured natural scene gives ZED excellent
+    # parallax. Re-run both tests outside before trusting this split there.
+
+    # Wheel odometry: forward speed and yaw rate. Velocities only, never the
+    # integrated pose, so the two sources cannot fight over absolute position.
     odom0: /diff_drive_controller/odom
     odom0_config: [false, false, false,
                    false, false, false,
@@ -26,12 +46,17 @@ ekf_filter_node:
     odom0_relative: false
     odom0_queue_size: 10
 
-    # ZED visual odometry: same treatment, velocities only, so the two sources
-    # cannot fight over absolute position
+    # ZED visual odometry: vy and yaw rate, but NOT vx.
+    #   vx   excluded - the 8% scale error measured above lives here
+    #   vy   kept     - a differential drive cannot measure lateral motion at
+    #                   all, it is structurally pinned to zero, so this is the
+    #                   only source of skid and caster-scrub information
+    #   vyaw kept     - agrees with the wheels to 0.29%, and averaging two
+    #                   independent estimates of it reduces drift
     odom1: /zed/zed_node/odom
     odom1_config: [false, false, false,
                    false, false, false,
-                   true,  true,  false,
+                   false, true,  false,
                    false, false, true,
                    false, false, false]
     odom1_differential: false
