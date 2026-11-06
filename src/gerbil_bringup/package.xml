@@ -38,10 +38,11 @@
   <!-- Wraps the primary controller so a badly misaligned start becomes an
        in-place rotation instead of a tight arc -->
   <exec_depend>nav2_rotation_shim_controller</exec_depend>
-  <!-- DWB is the primary controller the shim hands off to -->
+  <!-- Not currently selected. RPP is the primary controller, chosen for the
+       sparse-obstacle desert case. DWB stays installed because switching to
+       it is one plugin line plus the block preserved at 179109b, and it is
+       the fallback if local obstacle avoidance turns out to be needed. -->
   <exec_depend>nav2_dwb_controller</exec_depend>
-  <!-- Kept although not currently selected: the documented fallback if DWB
-       oscillates. Swapping back is one plugin line, so keep it installed. -->
   <exec_depend>nav2_smac_planner</exec_depend>
   <!-- scripts/aruco_detector.py (not in any launch file) -->
   <exec_depend>rclpy</exec_depend>
