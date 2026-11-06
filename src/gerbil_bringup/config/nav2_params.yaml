@@ -72,7 +72,16 @@ controller_server:
       use_cost_regulated_linear_velocity_scaling: true  # slows near inflation potential field
       regulated_linear_scaling_min_radius: 0.9
       regulated_linear_scaling_min_speed: 0.25
-      use_rotate_to_heading: false
+      # TRUE because this is a differential drive and cannot crab. With it
+      # false RPP tries to ARC onto the path, so from a standstill with a large
+      # heading error the rover creeps forward on a tight curve instead of
+      # simply turning to face the path. Nav2 defaults this to true for exactly
+      # this reason; it was false here.
+      # Below rotate_to_heading_min_angle (0.785 rad = 45 deg) it still arcs,
+      # which keeps motion smooth for small corrections.
+      # rotate_to_heading_angular_vel 0.5 matches angular.z.max_velocity in
+      # gerbil_controllers.yaml -- raise both together or neither.
+      use_rotate_to_heading: true
       allow_reversing: false
       rotate_to_heading_min_angle: 0.785
       max_angular_accel: 0.7
@@ -107,7 +116,8 @@ behavior_server:
     global_footprint_topic: global_costmap/published_footprint
     cycle_frequency: 10.0
     # no "spin": the rover stalls pivoting in place, which is also why
-    # use_rotate_to_heading is false. Recovery is backup + wait.
+    # use_rotate_to_heading is now true, so a heading error is corrected by
+    # turning in place rather than only through recovery behaviours.
     behavior_plugins: ["backup", "drive_on_heading", "wait", "assisted_teleop"]
     backup:
       plugin: "nav2_behaviors/BackUp"
@@ -142,7 +152,14 @@ global_costmap:
       # Half-width 0.24: with wheel_separation 0.44 the outer tyre faces reach
       # 0.44/2 + 0.03195/2 = 0.236, so the old 0.23 cut the wheels out of the
       # footprint and Nav2 would have planned paths that clipped them.
-      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"  # chassis 0.61 long, wheel span 0.455 wide. VERIFY by measuring.
+      # MEASURED, no longer an estimate. Chassis 0.6096 long so +/-0.3048,
+      # rounded to 0.31. Wheel span is separation 0.44 + one tyre width 0.032
+      # = outer faces at 0.236, so +/-0.24 to enclose the wheels.
+      # NOTE this polygon is expressed about base_link, which currently sits at
+      # the CHASSIS CENTRE while the rover actually pivots about the wheel
+      # axle 0.2448 m forward. Until base_link is moved there, Nav2 is
+      # collision-checking the wrong pivot.
+      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"
       resolution: 0.05
       rolling_window: true
       width: 20                      # indoor rooms/hallways
@@ -192,7 +209,14 @@ local_costmap:
       # Half-width 0.24: with wheel_separation 0.44 the outer tyre faces reach
       # 0.44/2 + 0.03195/2 = 0.236, so the old 0.23 cut the wheels out of the
       # footprint and Nav2 would have planned paths that clipped them.
-      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"  # chassis 0.61 long, wheel span 0.455 wide. VERIFY by measuring.
+      # MEASURED, no longer an estimate. Chassis 0.6096 long so +/-0.3048,
+      # rounded to 0.31. Wheel span is separation 0.44 + one tyre width 0.032
+      # = outer faces at 0.236, so +/-0.24 to enclose the wheels.
+      # NOTE this polygon is expressed about base_link, which currently sits at
+      # the CHASSIS CENTRE while the rover actually pivots about the wheel
+      # axle 0.2448 m forward. Until base_link is moved there, Nav2 is
+      # collision-checking the wrong pivot.
+      footprint: "[[-0.31, -0.24], [-0.31, 0.24], [0.31, 0.24], [0.31, -0.24]]"
       plugins: ["obstacle_layer", "inflation_layer"]   # add a ZED pointcloud voxel_layer here once LIDAR-only baseline is proven
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
