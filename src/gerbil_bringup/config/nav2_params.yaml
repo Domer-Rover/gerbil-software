@@ -95,7 +95,47 @@ controller_server:
       stateful: True
 
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      # RotationShimController WRAPS RegulatedPurePursuit rather than replacing
+      # it. When the rover's heading differs from the start of the new path by
+      # more than angular_dist_threshold it rotates in place until aligned,
+      # then hands every subsequent cycle to the primary controller.
+      #
+      # WHY: a pure-pursuit controller handed a path starting behind it
+      # commands very tight arcs, which on a differential drive looks like
+      # thrashing. The shim turns that one case into a predictable in-place
+      # rotation. It is ~5 parameters and costs nothing once aligned.
+      #
+      # WHY NOT MPPI: it samples thousands of trajectories per cycle. The Orin
+      # Nano is already running ZED neural depth at 30 fps, the LIDAR and a
+      # 50 Hz EKF. If MPPI misses its 50 ms budget at 20 Hz the symptom is
+      # erratic motion, and it degrades suddenly rather than gracefully.
+      # WHY NOT DWB: ~30 interacting critic weights, and the classic failure
+      # is exactly the oscillation we are trying to avoid.
+      #
+      # NOTE ON OBSTACLE AVOIDANCE: RPP does not avoid obstacles. It follows
+      # the path and STOPS when use_collision_detection sees an imminent hit.
+      # All avoidance comes from planner_server replanning around what the
+      # global costmap sees, at the cadence the BT's RateController sets. If
+      # the rover is not avoiding something, look at the costmap and the
+      # replan rate before touching any parameter in this block.
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      # Rotate in place when more than 45 deg off the path heading. Matches
+      # RPP's own rotate_to_heading_min_angle below so the two agree on what
+      # counts as "badly misaligned".
+      angular_dist_threshold: 0.785
+      # How far along the path to sample for the heading to rotate toward.
+      # Too small and it chases noise in the first path segment.
+      forward_sampling_distance: 0.5
+      # Both must match the real limits. angular.z.max_velocity in
+      # gerbil_controllers.yaml is 0.5, so a larger value here is simply
+      # clamped by the controller and makes the shim mispredict its own timing.
+      rotate_to_heading_angular_vel: 0.5
+      max_angular_accel: 0.7
+      # Collision-check this far ahead while rotating. The footprint is
+      # asymmetric with 0.55 m of tail behind the pivot, so rotation sweeps a
+      # 0.60 m radius -- this is what stops it rotating into something.
+      simulate_ahead_time: 1.0
       desired_linear_vel: 0.25         # indoor; small robot
       lookahead_dist: 0.4
       min_lookahead_dist: 0.2

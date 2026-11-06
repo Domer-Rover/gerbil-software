@@ -35,6 +35,8 @@
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <!-- Nav2 plugins selected in config/nav2_params.yaml -->
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <!-- Wraps RPP so a badly misaligned start becomes an in-place rotation -->
+  <exec_depend>nav2_rotation_shim_controller</exec_depend>
   <exec_depend>nav2_smac_planner</exec_depend>
   <!-- scripts/aruco_detector.py (not in any launch file) -->
   <exec_depend>rclpy</exec_depend>
