@@ -16,22 +16,27 @@
     <xacro:property name="base_height" value="${base_clearance + base_thickness}" />
     <xacro:property name="base_mass" value="6.8" />           <!-- ~15 lbs -->
 
-    <!-- ROLLING radius: axle centre to the OUTER surface of the tread, i.e.
-         the ground contact patch - NOT the rim. Distance per revolution is
-         2*pi*r taken at the contact patch, so anything short of the tread
-         surface under-reports travel.
-         52.74mm by digital caliper, 2026-11-05. That is 105.5mm / 4.15 in
-         across, i.e. a nominal 4 in wheel. History of this value:
-           0.0381   a tape read to the RIM, 10mm short of the tread
-           0.04756  recorded as "95.11mm diameter". 3.74 in matches no stock
-                    wheel size and is 5mm under the caliper
-           0.05274  caliper, UNLOADED  <- current
-         The caliper figure is unloaded, so the true LOADED rolling radius is a
-         little smaller as the tread compresses under the rover's weight. That
-         makes this a slight over-estimate, and the robot will report having
-         travelled marginally further than it did. The 2m drive test is still
-         the final word: scale by actual/reported. -->
-    <xacro:property name="wheel_radius" value="0.05274" />    <!-- 105.48mm dia, caliper -->
+    <!-- ROLLING radius, from a DRIVE TEST - the only measurement that counts.
+         Axle centre to the ground contact patch under load. Distance per
+         revolution is 2*pi*r at the contact patch, so neither the rim nor an
+         unloaded caliper reading gives the right number.
+         Calibrated 2026-11-05: a tape-measured 3.000 m reverse drive was
+         reported as 3.3370 m by wheel odometry, 11.2% over, so
+             0.05274 * (3.000 / 3.3370) = 0.04741
+         ZED VIO independently read 2.9602 m on the same drive, within 1.3% of
+         the tape, which places the error wholly in this constant.
+         Measurement history, newest first:
+           0.04741  DRIVE TEST, 3 m, loaded          <- current, trust this
+           0.05274  digital caliper, unloaded - 11% high, almost certainly
+                    taken across a rim flange rather than the tread
+           0.04756  earlier recorded value - within 0.3% of the drive test,
+                    so it was right all along
+           0.0381   a tape read that stopped at the rim
+         Do NOT replace this with a static measurement. Re-run the 3 m drive
+         instead. Keep in sync with wheel_radius in
+         gerbil_bringup/config/gerbil_controllers.yaml, which is the copy
+         diff_drive_controller actually integrates. -->
+    <xacro:property name="wheel_radius" value="0.04741" />    <!-- 3m drive test -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
     <!-- Deck underside in base_link coords (base_link z=0 is the axle plane).
