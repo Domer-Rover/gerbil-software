@@ -65,8 +65,10 @@ POS_MAX =  2_000_000_000
 # of this script re-measures it rather than using the value below, so these are
 # a documented fallback for --no-test. Measured 2026-11-05 on a 25.1V pack with
 # the wheels free, taking the smaller of the forward and reverse magnitudes:
-#   M1 fwd 9768 / rev 9915 -> 9768   (~210 RPM at the output shaft)
-#   M2 fwd 10841 / rev 10550 -> 10550 (~227 RPM)
+#   M1 fwd 9788 / rev 9911 -> 9788   (~211 RPM at the output shaft)
+#   M2 fwd 10838 / rev 10556 -> 10556 (~227 RPM)
+# These are what is now in the board's NVM, confirmed by --read after the
+# reboot that the NVM write triggers.
 # Motion Studio's auto-tune reported 10560 and 11220, roughly 7% higher. These
 # measured figures are the ones the step test validated, so they are preferred.
 #
@@ -80,12 +82,12 @@ POS_MAX =  2_000_000_000
 # 2522 counts/s, 26% of the weaker motor, so the asymmetry never comes into play.
 MOTORS = {
     "M1": {
-        "velocity": {"p": 5.09039, "i": 0.27892, "d": 0.0, "qpps": 9768},
+        "velocity": {"p": 5.09039, "i": 0.27892, "d": 0.0, "qpps": 9788},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
     "M2": {
-        "velocity": {"p": 5.24083, "i": 0.35532, "d": 0.0, "qpps": 10550},
+        "velocity": {"p": 5.24083, "i": 0.35532, "d": 0.0, "qpps": 10556},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
@@ -415,10 +417,18 @@ def main():
                                  "RAM but was NOT saved to NVM; retune P/I and rerun")
 
         if args.save:
+            # Stop the motors FIRST. WriteNVM reboots the RoboClaw, and on a
+            # USB CDC board that tears down /dev/ttyACM0 and re-enumerates it,
+            # so every later call on this handle fails with Errno 5. Stopping
+            # here means the reboot is the last thing that touches the port.
+            stop(rc)
             if not rc.WriteNVM(ADDRESS):
                 raise TestFailed("WriteNVM failed")
             record["saved_to_nvm"] = True
             print("\nSaved to NVM.")
+            print("The board reboots on an NVM write, so the serial link just "
+                  "dropped.\nThat is expected. Encoder counts reset to 0. "
+                  "Re-run with --read to confirm.")
         else:
             print("\nApplied to RAM only. Run with --save to persist.")
 
@@ -429,11 +439,17 @@ def main():
         record["result"] = "failed: interrupted"
     finally:
         try:
-            if not args.read:
+            # After --save the board has rebooted and this handle is dead, so
+            # these calls are expected to fail. Previously they raised
+            # PacketTimeoutError and the script exited with a traceback even
+            # though the run had fully succeeded.
+            if not args.read and not record["saved_to_nvm"]:
                 stop(rc)
                 if record["written"]:
                     record["after"] = snapshot(rc)
                     print_snapshot("Board state after", record["after"])
+        except Exception as e:
+            print(f"(cleanup skipped: {type(e).__name__}: {e})")
         finally:
             rc.close()
             path = save_record(record)
