@@ -1,6 +1,11 @@
 controller_manager: 
   ros__parameters:
-    update_rate: 20 # Hz (reduced from 100 for reliable RoboClaw serial comms)
+    # Master clock: every downstream rate is capped by this. The ceiling is the
+    # 10ms select() timeout in roboclaw_serial device.hpp read(), called twice
+    # per cycle inside the control loop -- at 100Hz one timed-out read eats the
+    # whole 10ms period, which is why 100 did not work. At 50Hz a worst-case
+    # read is half the 20ms budget. If "Overrun" warnings appear, drop to 30.
+    update_rate: 50 # Hz
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -12,8 +17,22 @@ diff_drive_controller:
   ros__parameters: 
     left_wheel_names: ["base_left_wheel_joint"]
     right_wheel_names: ["base_right_wheel_joint"]
-    wheel_separation: 0.42285  # 422.85mm center-to-center measured
-    wheel_radius: 0.04756     # 95.11mm diameter measured
+    # These two are the ONLY copies that affect odometry: the xacro's values
+    # are for visualisation and TF. Keep them in sync by hand.
+    # VERIFIED BY SPIN TEST 2026-11-05: one full revolution, judged a shade
+    # over 360 deg, measured 363.81 deg from unwrapped pose and 363.78 from
+    # integrated angular.z -- two independent methods 0.03 deg apart. ZED read
+    # 362.75. A ZED-referenced correction would be 0.4413, a 0.3% change and
+    # below the test's resolution, so 0.44 stands.
+    wheel_separation: 0.44    # 440mm tread-centre to tread-centre
+    # ROLLING radius, CALIBRATED BY DRIVE TEST 2026-11-05, which is the only
+    # measurement that counts: a tape-measured 3.000 m drive was reported as
+    # 3.3370 m, 11.2% over, so 0.05274 * (3.000/3.3370) = 0.04741.
+    # ZED VIO read 2.9602 m on the same drive, within 1.3% of the tape, so the
+    # error was entirely here. The 0.05274 caliper reading it replaces was
+    # ~11% high, almost certainly taken across a rim flange, not the tread.
+    # Do not substitute a static measurement. Re-run the 3 m drive.
+    wheel_radius: 0.04741     # 3m drive test
     
     # Multipliers for fine-tuning (1.0 = no adjustment)
     wheel_separation_multiplier: 1.0
@@ -21,7 +40,7 @@ diff_drive_controller:
     right_wheel_radius_multiplier: 1.0
 
     # ==================== ODOMETRY ====================
-    publish_rate: 50.0  # Hz (reduced from 100 for efficiency)
+    publish_rate: 50.0  # Hz (matches update_rate; was unreachable at update_rate 20)
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
     

@@ -17,7 +17,17 @@ install(
 )
 
 install(
-  PROGRAMS scripts/aruco_detector.py
+  PROGRAMS
+    scripts/aruco_detector.py
+    scripts/teleop_keyboard.sh
+    scripts/teleop_joystick.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# teleop_common.sh is sourced by the two teleop scripts, never run directly,
+# so it installs as data rather than as a program.
+install(
+  FILES scripts/teleop_common.sh
   DESTINATION lib/${PROJECT_NAME}
 )
 

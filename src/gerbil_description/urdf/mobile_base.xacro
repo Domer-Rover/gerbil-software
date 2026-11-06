@@ -1,43 +1,267 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+    <!-- DO NOT write a colon followed by a space anywhere in a comment in
+         this file. xacro copies comments verbatim into the generated URDF,
+         and gerbil.launch.xml passes that URDF through a param value, which
+         the launch parser reads as YAML. A colon followed by a space makes
+         YAML treat the line as a mapping key and the whole
+         robot_description fails to parse with "mapping values are not
+         allowed here". A colon at the END of a line breaks it the same way,
+         and so does a hash character. A colon with no space after it, like
+         99.5to1, is fine. Use a comma or a dash instead.
+         CI enforces this in the "Check URDF" step. -->
+
     <!-- ROBOT DIMENSIONS -->
-    <!-- Drive wheels and ZED camera are at the front (+X) -->
-    <!-- Caster wheel is at the rear (-X) -->
+    <!-- +X is forward. Drive wheels and ZED camera are at the front (+X).
+         the caster trails at the rear (-X). Confirmed on hardware 2026-11-03. -->
     <xacro:property name="base_length" value="0.6096" />      <!-- 24 inches -->
     <xacro:property name="base_width" value="0.3048" />       <!-- 12 inches -->
-    <xacro:property name="base_height" value="0.0635" />      <!-- 2.5 inches -->
+    <!-- base_height USED to mean two things at once - the acrylic plate's own
+         thickness AND its height off the ground. Split 2026-11-05 after tape
+         measurements. base_link z=0 remains the wheel axle plane. -->
+    <xacro:property name="base_thickness" value="0.00508" />   <!-- 0.2 in acrylic plate, measured 2026-11-05 -->
+    <xacro:property name="base_clearance" value="0.0635" />    <!-- 2.5 in, ground to plate underside -->
+    <!-- Kept as an alias so nothing downstream breaks. It is the TOP surface
+         of the deck above the ground, which is what sensors mount to. -->
+    <xacro:property name="base_height" value="${base_clearance + base_thickness}" />
     <xacro:property name="base_mass" value="6.8" />           <!-- ~15 lbs -->
 
-    <xacro:property name="wheel_radius" value="0.04756" />    <!-- 95.11mm diameter -->
+    <!-- ROLLING radius, from a DRIVE TEST - the only measurement that counts.
+         Axle centre to the ground contact patch under load. Distance per
+         revolution is 2*pi*r at the contact patch, so neither the rim nor an
+         unloaded caliper reading gives the right number.
+         Calibrated 2026-11-05. A tape-measured 3.000 m reverse drive was
+         reported as 3.3370 m by wheel odometry, 11.2% over, so
+             0.05274 * (3.000 / 3.3370) = 0.04741
+         ZED VIO independently read 2.9602 m on the same drive, within 1.3% of
+         the tape, which places the error wholly in this constant.
+         Measurement history, newest first -
+           0.04741  DRIVE TEST, 3 m, loaded          <- current, trust this
+           0.05274  digital caliper, unloaded - 11% high, almost certainly
+                    taken across a rim flange rather than the tread
+           0.04756  earlier recorded value - within 0.3% of the drive test,
+                    so it was right all along
+           0.0381   a tape read that stopped at the rim
+         Do NOT replace this with a static measurement. Re-run the 3 m drive
+         instead. Keep in sync with wheel_radius in
+         gerbil_bringup/config/gerbil_controllers.yaml, which is the copy
+         diff_drive_controller actually integrates. -->
+    <xacro:property name="wheel_radius" value="0.04741" />    <!-- 3m drive test -->
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
-    <xacro:property name="wheel_separation" value="0.42285" /> <!-- 422.85mm center-to-center -->
+    <!-- Deck underside in base_link coords (base_link z=0 is the axle plane).
+         Must come after wheel_radius, as xacro evaluates property values eagerly. -->
+    <xacro:property name="deck_z" value="${base_clearance - wheel_radius}" />
+    <xacro:property name="caster_radius" value="0.0254" />    <!-- 1 in -->
+    <!-- Caster is screwed under the deck 2 in in from the rear edge -->
+    <xacro:property name="caster_x" value="${-(base_length / 2.0 - 0.0508)}" />
+
+    <!-- SENSOR STACK AT THE FRONT (measured 2026-11-05)
+         The ZED2i sits in a 3D-printed mould on the deck, flush with the front
+         edge. The LD19 LIDAR sits directly on top of that mould, ~1mm above
+         the camera body. Deck top surface, in base_link coords, is
+         deck_z + base_thickness. -->
+    <xacro:property name="deck_top" value="${deck_z + base_thickness}" />
+    <!-- LIDAR puck centre is 1.5 in back from the front edge -->
+    <xacro:property name="lidar_x" value="${base_length / 2.0 - 0.0381}" />
+    <!-- Scan plane is 6 in above the deck, and this is the LIDAR's frame
+         origin -
+         ranges are measured from here, so it must be the scan slot, not the
+         top of the housing. -->
+    <xacro:property name="lidar_z" value="${deck_top + 0.1524}" />
+    <xacro:property name="lidar_housing_length" value="0.045" />
+    <!-- Camera body is 33mm deep, so its centre sits half that back from the
+         front edge to leave the front face flush. -->
+    <xacro:property name="camera_depth" value="0.033" />
+    <xacro:property name="camera_height" value="0.030" />
+    <xacro:property name="camera_x" value="${base_length / 2.0 - camera_depth / 2.0}" />
+    <!-- 1mm clearance between the camera top and the LIDAR housing underside -->
+    <xacro:property name="camera_z" value="${lidar_z - lidar_housing_length / 2.0 - 0.001 - camera_height / 2.0}" />
+    <!-- The printed mould fills the gap from the deck up to the camera -->
+    <xacro:property name="mount_height" value="${camera_z - camera_height / 2.0 - deck_top}" />
+    <!-- 440mm, tread-centre to tread-centre, VERIFIED BY SPIN TEST.
+         One deliberate full revolution, judged by eye to land a shade over
+         360 deg, measured 2026-11-05 -
+             wheel odometry  -363.81 deg  (pose, unwrapped)
+                             -363.78 deg  (integrated angular.z, independent)
+             ZED VIO         -362.75 deg
+         The two wheel methods agree to 0.03 deg so the measurement is sound,
+         and 363.81 sits inside the plausible range for "a shade over 360".
+         Taking ZED as truth would give 0.4413, a 0.3% change, below what this
+         test can resolve, so 0.44 stands.
+         It supersedes earlier figures, which were all derived from outer-face
+         readings needing a tyre-width correction that under-read -
+           0.42285 recorded "center-to-center", 0.457073 outer-to-outer,
+           0.4318 a rougher 17 in read of the same thing.
+         Yaw from a quaternion WRAPS at +/-180, so a full turn reads as ~0 in a
+         final pose and must be unwrapped continuously while turning. Do not
+         try to measure this from an end pose.
+         Scales reported yaw rate linearly. Keep in sync with
+         gerbil_bringup/config/gerbil_controllers.yaml. -->
+    <xacro:property name="wheel_separation" value="0.44" />
 
     <!-- Wheel X position - near front edge of chassis -->
     <xacro:property name="wheel_x_offset" value="${base_length / 2.0 - 0.06}" />
+
+    <!-- DRIVE RAIL ASSEMBLY (under the acrylic chassis, in a T)
+         The long arm of the T runs fore-aft down the centreline. The top of
+         the T is a transverse rail at the front carrying both motors. The
+         motor bodies run inboard under the chassis and their output shafts
+         protrude past the chassis sides, which is why wheel_separation
+         (422.85mm) is wider than base_width (304.8mm).
+         Motor body is a goBILDA 5304 Yellow Jacket, 99.5to1.
+         These are ESTIMATES for visualisation - tape-measure and correct. -->
+    <xacro:property name="rail_thickness" value="0.02" />
+    <xacro:property name="rail_long_length" value="0.45" />
+    <xacro:property name="rail_long_width" value="0.05" />
+    <xacro:property name="rail_cross_length" value="0.30" />
+    <xacro:property name="rail_cross_width" value="0.05" />
+    <xacro:property name="motor_diameter" value="0.037" />
+    <xacro:property name="motor_length" value="0.095" />
+    <!-- Motor sits just inboard of the wheel, so its outer face meets the tyre's
+         inner face, so the body reaches back under the chassis. -->
+    <xacro:property name="motor_y" value="${wheel_separation / 2.0 - wheel_length / 2.0 - motor_length / 2.0}" />
+    <!-- Rails bolt to the deck underside and hang down from it -->
+    <xacro:property name="rail_z" value="${deck_z - rail_thickness / 2.0}" />
 
     <!-- BASE FOOTPRINT -->
     <link name="base_footprint" />
 
     <!-- BASE LINK -->
     <link name="base_link">
+        <!-- Acrylic deck, a thin plate sitting base_clearance off the ground -->
         <visual>
             <geometry>
-                <box size="${base_length} ${base_width} ${base_height}" />
+                <box size="${base_length} ${base_width} ${base_thickness}" />
             </geometry>
-            <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
-            <material name="blue" />
+            <origin xyz="0 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
+            <material name="grey" />
         </visual>
         <collision>
             <geometry>
-                <box size="${base_length} ${base_width} ${base_height}" />
+                <box size="${base_length} ${base_width} ${base_thickness}" />
             </geometry>
-            <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
+            <origin xyz="0 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
         </collision>
+
+        <!-- T-rail long arm, down the centreline, running back from the
+             transverse rail at the front -->
+        <visual>
+            <geometry>
+                <box size="${rail_long_length} ${rail_long_width} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset - rail_long_length / 2.0} 0 ${rail_z}" rpy="0 0 0" />
+            <material name="grey" />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${rail_long_length} ${rail_long_width} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset - rail_long_length / 2.0} 0 ${rail_z}" rpy="0 0 0" />
+        </collision>
+
+        <!-- T-rail transverse arm at the front, carrying both motors -->
+        <visual>
+            <geometry>
+                <box size="${rail_cross_width} ${rail_cross_length} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} 0 ${rail_z}" rpy="0 0 0" />
+            <material name="grey" />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="${rail_cross_width} ${rail_cross_length} ${rail_thickness}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} 0 ${rail_z}" rpy="0 0 0" />
+        </collision>
+
+        <!-- Left drive motor, protruding outboard of the chassis -->
+        <visual>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${motor_y} 0" rpy="${pi / 2.0} 0 0" />
+            <material name="black" />
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${motor_y} 0" rpy="${pi / 2.0} 0 0" />
+        </collision>
+
+        <!-- Right drive motor -->
+        <visual>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${-motor_y} 0" rpy="${pi / 2.0} 0 0" />
+            <material name="black" />
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder radius="${motor_diameter / 2.0}" length="${motor_length}" />
+            </geometry>
+            <origin xyz="${wheel_x_offset} ${-motor_y} 0" rpy="${pi / 2.0} 0 0" />
+        </collision>
+
+        <!-- ON-DECK COMPONENTS, back to front, as described 2026-11-05.
+             Added as extra <visual> on base_link rather than as new links, so
+             they do not clutter the TF tree. Footprint positions are
+             ESTIMATES from the verbal layout. Only the overall front-to-back
+             ORDER is confirmed. Sizes are rough. No <collision> on these, since the
+             deck slab already covers the Nav2 footprint, and duplicating it
+             would only slow collision checking. -->
+        <!-- Jetson Orin, rear right (-X, -Y) -->
+        <visual>
+            <geometry>
+                <box size="0.11 0.09 0.05" />
+            </geometry>
+            <origin xyz="-0.21 -0.07 ${deck_top + 0.025}" rpy="0 0 0" />
+            <material name="black" />
+        </visual>
+        <!-- DC-DC converter, immediately to the left of the Jetson (+Y) -->
+        <visual>
+            <geometry>
+                <box size="0.10 0.07 0.04" />
+            </geometry>
+            <origin xyz="-0.21 0.07 ${deck_top + 0.020}" rpy="0 0 0" />
+            <material name="black" />
+        </visual>
+        <!-- RoboClaw 2x60A, forward of the Jetson/converter pair -->
+        <visual>
+            <geometry>
+                <box size="0.10 0.10 0.03" />
+            </geometry>
+            <origin xyz="-0.07 0 ${deck_top + 0.015}" rpy="0 0 0" />
+            <material name="black" />
+        </visual>
+        <!-- 12V battery in its printed mould, forward of the RoboClaw -->
+        <visual>
+            <geometry>
+                <box size="0.17 0.09 0.08" />
+            </geometry>
+            <origin xyz="0.08 0 ${deck_top + 0.040}" rpy="0 0 0" />
+            <material name="blue" />
+        </visual>
+        <!-- Printed mould carrying the ZED2i, at the front edge. Its height is
+             derived so the camera lands at camera_z. -->
+        <visual>
+            <geometry>
+                <box size="0.06 0.10 ${mount_height}" />
+            </geometry>
+            <origin xyz="${camera_x} 0 ${deck_top + mount_height / 2.0}" rpy="0 0 0" />
+            <material name="blue" />
+        </visual>
+
         <inertial>
             <mass value="${base_mass}" />
-            <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
+            <!-- Inertia treats the whole loaded deck as one slab of height
+                 base_height, which is coarser than the geometry above but is a
+                 better match to the real mass distribution than a bare plate,
+                 and ros2_control does not use it for a diff-drive base. -->
+            <origin xyz="0 0 ${deck_top + base_height / 2.0}" rpy="0 0 0" />
             <inertia ixx="${(1/12) * base_mass * (base_width*base_width + base_height*base_height)}"
                      ixy="0" ixz="0"
                      iyy="${(1/12) * base_mass * (base_length*base_length + base_height*base_height)}"
@@ -81,14 +305,14 @@
     <link name="caster_wheel_link">
         <visual>
             <geometry>
-                <sphere radius="${wheel_radius / 2.0}" />
+                <sphere radius="${caster_radius}" />
             </geometry>
             <origin xyz="0 0 0" rpy="0 0 0" />
-            <material name="grey" />
+            <material name="black" />
         </visual>
         <collision>
             <geometry>
-                <sphere radius="${wheel_radius / 2.0}" />
+                <sphere radius="${caster_radius}" />
             </geometry>
             <origin xyz="0 0 0" rpy="0 0 0" />
         </collision>
@@ -152,7 +376,7 @@
         <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
     </joint>
 
-    <!-- Drive wheels at rear but changed to front -->
+    <!-- Drive wheels, at the front (+X) -->
     <joint name="base_right_wheel_joint" type="continuous">
         <parent link="base_link" />
         <child link="right_wheel_link" />
@@ -167,11 +391,12 @@
         <axis xyz="0 1 0" />
     </joint>
 
-    <!-- Caster at the front, but we consider it rear -->
+    <!-- Caster, trailing at the rear (-X), 2 in in from the rear edge.
+         z puts the sphere's underside exactly on the ground plane. -->
     <joint name="base_caster_wheel_joint" type="fixed">
         <parent link="base_link" />
         <child link="caster_wheel_link" />
-        <origin xyz="${-wheel_x_offset} 0 ${-wheel_radius / 2.0}" rpy="0 0 0" />
+        <origin xyz="${caster_x} 0 ${caster_radius - wheel_radius}" rpy="0 0 0" />
     </joint>
 
     <!-- IMU centered on top of chassis not quite right, doesn't really matter, can add meshes later -->
@@ -201,25 +426,35 @@
     <joint name="imu_joint" type="fixed">
         <parent link="base_link" />
         <child link="imu_link" />
-        <origin xyz="0 0 ${base_height + 0.005}" rpy="0 0 0" />
+        <origin xyz="0 0 ${deck_z + base_thickness + 0.005}" rpy="0 0 0" />
     </joint>
 
-    <!-- ZED camera at front edge, on top of chassis, facing forward (rear) -->
+    <!-- ZED camera at the front edge, on top of the chassis, facing forward (+X) -->
     <joint name="camera_joint" type="fixed">
         <parent link="base_link" />
         <child link="zed_camera_link" />
-        <origin xyz="${base_length / 2.0 - 0.02} 0 ${base_height + 0.015}" rpy="0 0 0" />
+        <origin xyz="${camera_x} 0 ${camera_z}" rpy="0 0 0" />
     </joint>
 
 
-    <!-- LIDAR mounted on the chassis top, centred.
-         TODO - measure the real mount position and yaw. The rpy below assumes
-         the same 90 deg clockwise mounting as Capybara; verify in Foxglove
-         that an object in front of the robot appears in front on /scan. -->
+    <!-- LIDAR, sitting on top of the ZED camera mount.
+         YAW MEASURED 2026-11-05. With yaw=0 the scan rendered 90 deg CCW of
+         reality, objects in front of the rover appeared off to its left, so
+         the mount is a quarter turn out and needs -pi/2 (90 deg clockwise) to
+         line the scan up with base_link. This confirms the -1.5708 originally
+         inherited from Capybara and rules out the +1.5708 that replaced it.
+         laser_filter.yaml's front-180 bounds are COUPLED to this value. A ray
+         at laser angle a points at a - pi/2 in base_link, so the forward half
+         is a in [0, pi]. Change this yaw and those bounds must change too.
+         XYZ measured 2026-11-05, 1.5 in back from the front edge, scan plane
+         6 in above the deck. This replaced an old "0 0" placement that put
+         the LIDAR at the chassis centre and biased every range by about 27cm.
+         The scan plane is only 0.221 m off the ground, which is why the rear
+         half has to be cropped rather than kept. -->
     <joint name="lidar_joint" type="fixed">
         <parent link="base_link" />
         <child link="laser_frame" />
-        <origin xyz="0 0 ${base_height + 0.023}" rpy="0 0 -1.5708" />
+        <origin xyz="${lidar_x} 0 ${lidar_z}" rpy="0 0 ${-pi / 2.0}" />
     </joint>
 
 </robot>

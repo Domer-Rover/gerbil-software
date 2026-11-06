@@ -28,6 +28,11 @@
             # ── Drive controller ───────────────────────────────────────────
             # cmd_vel_unstamped: what Nav2 (or teleop) is actually commanding
             - '/diff_drive_controller/cmd_vel_unstamped'
+            # twist_mux inputs: watch these to see WHICH source is driving.
+            # joystick (prio 100) > keyboard (90) > nav2 (10).
+            - '/cmd_vel_joy'
+            - '/cmd_vel_key'
+            - '/cmd_vel_nav'
             - '/diff_drive_controller/odom'
             - '/odometry/filtered'
             - '/imu/data'

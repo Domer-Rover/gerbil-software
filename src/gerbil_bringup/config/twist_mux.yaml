@@ -1,0 +1,44 @@
+# Arbitrates between the things that can drive Gerbil.
+#
+# WHY THIS EXISTS: before twist_mux, nav2's controller_server and
+# teleop_twist_joy both remapped straight onto
+# /diff_drive_controller/cmd_vel_unstamped. Nothing arbitrated, so the
+# controller simply obeyed whichever message arrived last and the robot
+# jittered between autonomous and manual commands instead of one overriding
+# the other.
+#
+# Highest priority with a live publisher wins. A topic goes "dead" once
+# nothing has arrived on it for `timeout` seconds, and the next priority down
+# takes over. So letting go of the joystick hands control back to nav2 after
+# 0.5s -- it does NOT stop the robot permanently. See the note at the bottom.
+twist_mux:
+    ros__parameters:
+        topics:
+            # Joystick wins over everything. 0.5s matches the controller's own
+            # cmd_vel_timeout so there is one consistent stale-command window.
+            joystick:
+                topic: cmd_vel_joy
+                timeout: 0.5
+                priority: 100
+            # Keyboard sits just under the joystick. teleop_twist_keyboard
+            # publishes only on keypress and repeats while held, so a 0.5s
+            # timeout means releasing the key releases control.
+            keyboard:
+                topic: cmd_vel_key
+                timeout: 0.5
+                priority: 90
+            # Nav2 is the lowest priority: it drives only when no human is.
+            navigation:
+                topic: cmd_vel_nav
+                timeout: 0.5
+                priority: 10
+
+        # NOTE: do NOT add "locks: []" here. ROS 2 cannot infer a type for an
+        # empty array parameter and twist_mux aborts with SIGABRT on startup.
+        # Locks are latched kill switches that block every topic below their
+        # priority. To add an e-stop later, declare it with real contents:
+        #   locks:
+        #     e_stop:
+        #       topic: e_stop
+        #       timeout: 0.0
+        #       priority: 255

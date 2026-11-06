@@ -1,10 +1,16 @@
 <launch>
     <!-- ==================== ARGUMENTS ==================== -->
-    <arg name="use_mock_hardware" default="true" />
+    <!-- false = talk to the real RoboClaw. Was true, which meant launching
+         this file DIRECTLY (rather than via the foxglove/nav2 wrappers, which
+         both already pass false) gave a simulated robot with no warning:
+         wheels still, odometry integrating perfectly, real /scan. Defaults
+         should give the real robot; ask for the simulation explicitly. -->
+    <arg name="use_mock_hardware" default="false" />
     <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
     <arg name="serial_port" default="/dev/gerbil_roboclaw" />
-    <arg name="use_joystick" default="false" />
-    <arg name="launch_lidar" default="false" />
+    <arg name="lidar_port" default="/dev/gerbil_lidar" />  <!-- needs udev/99-gerbil.rules installed -->
+    <arg name="use_twist_mux" default="true" description="arbitrate joystick / keyboard / nav2. Needs ros-humble-twist-mux. Turn OFF only to drive a single source straight into the controller." />
+    <arg name="launch_lidar" default="true" />
     <arg name="launch_gps" default="false" />
     <arg name="launch_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
     <arg name="launch_zed" default="true" />
@@ -17,13 +23,25 @@
 
     <!-- ==================== ROBOT STATE PUBLISHER ==================== -->
     <node pkg="robot_state_publisher" exec="robot_state_publisher">
-        <param name="robot_description"
+        <!-- type="str" is REQUIRED. Without it launch parses this value with
+             YAML rules, and xacro copies XML comments through into the
+             generated URDF, so a single ": " inside any comment (e.g.
+             "Acrylic deck: a thin plate") makes YAML read it as a mapping key
+             and the whole launch fails with "Failed to convert ... using yaml
+             rules". type="str" passes the URDF through verbatim. -->
+        <param name="robot_description" type="str"
                value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
     </node>
 
     <!-- ==================== ROS2 CONTROL ==================== -->
     <node pkg="controller_manager" exec="ros2_control_node" output="screen">
-        <param name="robot_description"
+        <!-- type="str" is REQUIRED. Without it launch parses this value with
+             YAML rules, and xacro copies XML comments through into the
+             generated URDF, so a single ": " inside any comment (e.g.
+             "Acrylic deck: a thin plate") makes YAML read it as a mapping key
+             and the whole launch fails with "Failed to convert ... using yaml
+             rules". type="str" passes the URDF through verbatim. -->
+        <param name="robot_description" type="str"
                value="$(command 'xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port)')" />
         <param from="$(find-pkg-share gerbil_bringup)/config/gerbil_controllers.yaml" />
     </node>
@@ -54,7 +72,7 @@
         <node pkg="ldlidar_stl_ros2" exec="ldlidar_stl_ros2_node" name="ldlidar_node" output="screen">
             <param name="product_name" value="LDLiDAR_LD06" />
             <param name="topic_name" value="scan_raw" />
-            <param name="port_name" value="/dev/gerbil_lidar" />
+            <param name="port_name" value="$(var lidar_port)" />
             <param name="port_baudrate" value="230400" />
             <param name="laser_scan_dir" value="true" />
             <param name="frame_id" value="laser_frame" />
@@ -83,17 +101,45 @@
         <param from="$(find-pkg-share gerbil_bringup)/config/ekf.yaml" />
     </node>
 
-    <!-- ==================== JOYSTICK TELEOP ==================== -->
-    <!-- Hold L1 (button 4) as the deadman, left stick to drive -->
-    <group if="$(var use_joystick)">
-        <node pkg="joy" exec="joy_node" name="joy_node" output="screen" />
-        <node pkg="teleop_twist_joy" exec="teleop_node" name="teleop_twist_joy" output="screen">
-            <param name="enable_button" value="4" />
-            <param name="axis_linear.x" value="1" />
-            <param name="axis_angular.yaw" value="0" />
-            <param name="scale_linear.x" value="0.3" />
-            <param name="scale_angular.yaw" value="1.0" />
-            <remap from="cmd_vel" to="/diff_drive_controller/cmd_vel_unstamped" />
+    <!-- ==================== COMMAND ARBITRATION ==================== -->
+    <!-- Every velocity source publishes to its OWN topic and twist_mux picks a
+         winner by priority, writing the result to the controller. Without this
+         nav2 and the joystick both wrote to the controller topic directly and
+         the robot obeyed whichever message was most recent.
+         Priorities live in config/twist_mux.yaml: joystick 100 > keyboard 90 >
+         nav2 10. -->
+    <group if="$(var use_twist_mux)">
+        <node pkg="twist_mux" exec="twist_mux" name="twist_mux" output="screen">
+            <param from="$(find-pkg-share gerbil_bringup)/config/twist_mux.yaml" />
+            <remap from="cmd_vel_out" to="/diff_drive_controller/cmd_vel_unstamped" />
         </node>
     </group>
+
+    <!-- ==================== TELEOP ====================
+         Neither joystick nor keyboard teleop is launched here. Both need a
+         terminal of their own: teleop_twist_keyboard reads raw stdin, and the
+         joystick is plugged in and unplugged independently of the robot stack,
+         so restarting everything to attach a pad was wasteful. Run whichever
+         you want in a second terminal:
+
+           ros2 run gerbil_bringup teleop_keyboard.sh
+           ros2 run gerbil_bringup teleop_joystick.sh
+
+         Both publish to their twist_mux input topic and share their speed
+         settings from scripts/teleop_common.sh, so they feel identical.
+         twist_mux above is what forwards them to the controller. -->
+
+    <!-- ==================== KEYBOARD TELEOP ==================== -->
+    <!-- Deliberately NOT launched here. teleop_twist_keyboard reads raw stdin,
+         so it only works when it owns a terminal; started from a launch file
+         it captures no keys. Run it yourself in a second terminal, with the
+         speeds matched to the joystick above. The exact command is in
+         gerbil_bringup/README or run:
+           ros2 run teleop_twist_keyboard teleop_twist_keyboard
+         with ros-args remapping cmd_vel to /cmd_vel_key and params
+         speed:=0.3 turn:=1.0  (an XML comment cannot contain a double hyphen,
+         which is why the flags are spelled out rather than shown literally).
+
+         twist_mux gives it priority 90, so it overrides nav2 but yields to
+         the joystick. -->
 </launch>
