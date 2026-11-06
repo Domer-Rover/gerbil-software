@@ -1,12 +1,23 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+    <!-- DO NOT write a colon followed by a space anywhere in a comment in
+         this file. xacro copies comments verbatim into the generated URDF,
+         and gerbil.launch.xml passes that URDF through a param value, which
+         the launch parser reads as YAML. A colon followed by a space makes
+         YAML treat the line as a mapping key and the whole
+         robot_description fails to parse with "mapping values are not
+         allowed here". A colon at the END of a line breaks it the same way,
+         and so does a hash character. A colon with no space after it, like
+         99.5to1, is fine. Use a comma or a dash instead.
+         CI enforces this in the "Check URDF" step. -->
+
     <!-- ROBOT DIMENSIONS -->
     <!-- +X is forward. Drive wheels and ZED camera are at the front (+X).
          the caster trails at the rear (-X). Confirmed on hardware 2026-11-03. -->
     <xacro:property name="base_length" value="0.6096" />      <!-- 24 inches -->
     <xacro:property name="base_width" value="0.3048" />       <!-- 12 inches -->
-    <!-- base_height USED to mean two things at once: the acrylic plate's own
+    <!-- base_height USED to mean two things at once - the acrylic plate's own
          thickness AND its height off the ground. Split 2026-11-05 after tape
          measurements. base_link z=0 remains the wheel axle plane. -->
     <xacro:property name="base_thickness" value="0.00508" />   <!-- 0.2 in acrylic plate, measured 2026-11-05 -->
@@ -20,12 +31,12 @@
          Axle centre to the ground contact patch under load. Distance per
          revolution is 2*pi*r at the contact patch, so neither the rim nor an
          unloaded caliper reading gives the right number.
-         Calibrated 2026-11-05: a tape-measured 3.000 m reverse drive was
+         Calibrated 2026-11-05. A tape-measured 3.000 m reverse drive was
          reported as 3.3370 m by wheel odometry, 11.2% over, so
              0.05274 * (3.000 / 3.3370) = 0.04741
          ZED VIO independently read 2.9602 m on the same drive, within 1.3% of
          the tape, which places the error wholly in this constant.
-         Measurement history, newest first:
+         Measurement history, newest first -
            0.04741  DRIVE TEST, 3 m, loaded          <- current, trust this
            0.05274  digital caliper, unloaded - 11% high, almost certainly
                     taken across a rim flange rather than the tread
@@ -40,7 +51,7 @@
     <xacro:property name="wheel_length" value="0.03195" />    <!-- 31.95mm width -->
     <xacro:property name="wheel_mass" value="0.5" />          <!-- kg estimate -->
     <!-- Deck underside in base_link coords (base_link z=0 is the axle plane).
-         Must come after wheel_radius: xacro evaluates property values eagerly. -->
+         Must come after wheel_radius, as xacro evaluates property values eagerly. -->
     <xacro:property name="deck_z" value="${base_clearance - wheel_radius}" />
     <xacro:property name="caster_radius" value="0.0254" />    <!-- 1 in -->
     <!-- Caster is screwed under the deck 2 in in from the rear edge -->
@@ -54,12 +65,13 @@
     <xacro:property name="deck_top" value="${deck_z + base_thickness}" />
     <!-- LIDAR puck centre is 1.5 in back from the front edge -->
     <xacro:property name="lidar_x" value="${base_length / 2.0 - 0.0381}" />
-    <!-- Scan plane is 6 in above the deck. This is the LIDAR's frame origin:
+    <!-- Scan plane is 6 in above the deck, and this is the LIDAR's frame
+         origin -
          ranges are measured from here, so it must be the scan slot, not the
          top of the housing. -->
     <xacro:property name="lidar_z" value="${deck_top + 0.1524}" />
     <xacro:property name="lidar_housing_length" value="0.045" />
-    <!-- Camera body: 33mm deep, so its centre sits half that back from the
+    <!-- Camera body is 33mm deep, so its centre sits half that back from the
          front edge to leave the front face flush. -->
     <xacro:property name="camera_depth" value="0.033" />
     <xacro:property name="camera_height" value="0.030" />
@@ -70,7 +82,7 @@
     <xacro:property name="mount_height" value="${camera_z - camera_height / 2.0 - deck_top}" />
     <!-- 440mm, tread-centre to tread-centre, VERIFIED BY SPIN TEST.
          One deliberate full revolution, judged by eye to land a shade over
-         360 deg, measured 2026-11-05:
+         360 deg, measured 2026-11-05 -
              wheel odometry  -363.81 deg  (pose, unwrapped)
                              -363.78 deg  (integrated angular.z, independent)
              ZED VIO         -362.75 deg
@@ -79,7 +91,7 @@
          Taking ZED as truth would give 0.4413, a 0.3% change, below what this
          test can resolve, so 0.44 stands.
          It supersedes earlier figures, which were all derived from outer-face
-         readings needing a tyre-width correction that under-read:
+         readings needing a tyre-width correction that under-read -
            0.42285 recorded "center-to-center", 0.457073 outer-to-outer,
            0.4318 a rougher 17 in read of the same thing.
          Yaw from a quaternion WRAPS at +/-180, so a full turn reads as ~0 in a
@@ -98,7 +110,7 @@
          motor bodies run inboard under the chassis and their output shafts
          protrude past the chassis sides, which is why wheel_separation
          (422.85mm) is wider than base_width (304.8mm).
-         Motor body: goBILDA 5304 Yellow Jacket, 99.5:1.
+         Motor body is a goBILDA 5304 Yellow Jacket, 99.5to1.
          These are ESTIMATES for visualisation - tape-measure and correct. -->
     <xacro:property name="rail_thickness" value="0.02" />
     <xacro:property name="rail_long_length" value="0.45" />
@@ -107,7 +119,7 @@
     <xacro:property name="rail_cross_width" value="0.05" />
     <xacro:property name="motor_diameter" value="0.037" />
     <xacro:property name="motor_length" value="0.095" />
-    <!-- Motor sits just inboard of the wheel: its outer face meets the tyre's
+    <!-- Motor sits just inboard of the wheel, so its outer face meets the tyre's
          inner face, so the body reaches back under the chassis. -->
     <xacro:property name="motor_y" value="${wheel_separation / 2.0 - wheel_length / 2.0 - motor_length / 2.0}" />
     <!-- Rails bolt to the deck underside and hang down from it -->
@@ -118,7 +130,7 @@
 
     <!-- BASE LINK -->
     <link name="base_link">
-        <!-- Acrylic deck: a thin plate, sitting base_clearance off the ground -->
+        <!-- Acrylic deck, a thin plate sitting base_clearance off the ground -->
         <visual>
             <geometry>
                 <box size="${base_length} ${base_width} ${base_thickness}" />
@@ -133,7 +145,7 @@
             <origin xyz="0 0 ${deck_z + base_thickness / 2.0}" rpy="0 0 0" />
         </collision>
 
-        <!-- T-rail: long arm down the centreline, running back from the
+        <!-- T-rail long arm, down the centreline, running back from the
              transverse rail at the front -->
         <visual>
             <geometry>
@@ -149,7 +161,7 @@
             <origin xyz="${wheel_x_offset - rail_long_length / 2.0} 0 ${rail_z}" rpy="0 0 0" />
         </collision>
 
-        <!-- T-rail: transverse arm at the front, carrying both motors -->
+        <!-- T-rail transverse arm at the front, carrying both motors -->
         <visual>
             <geometry>
                 <box size="${rail_cross_width} ${rail_cross_length} ${rail_thickness}" />
@@ -198,7 +210,7 @@
              Added as extra <visual> on base_link rather than as new links, so
              they do not clutter the TF tree. Footprint positions are
              ESTIMATES from the verbal layout. Only the overall front-to-back
-             ORDER is confirmed. Sizes are rough. No <collision> on these: the
+             ORDER is confirmed. Sizes are rough. No <collision> on these, since the
              deck slab already covers the Nav2 footprint, and duplicating it
              would only slow collision checking. -->
         <!-- Jetson Orin, rear right (-X, -Y) -->
