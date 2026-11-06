@@ -61,19 +61,31 @@ POS_MAX =  2_000_000_000
 # velocity loop is normally run as PI. The earlier thrashing came from P being
 # twice too high, not from the missing D.
 #
-# QPPS is a MEASUREMENT (counts/sec at full power), not a gain. It was taken
-# unloaded on a 25.2V pack, so it is an upper bound: under load the wheels
-# cannot reach it and the PI terms make up the difference.
-# M1 10560 vs M2 11220 is a 6.3% spread, down from 7.7%. Each wheel closes its
-# own loop, so velocity PID absorbs most of what made the rover curve left.
+# QPPS is a MEASUREMENT (counts/sec at full power), not a gain, and a full run
+# of this script re-measures it rather than using the value below, so these are
+# a documented fallback for --no-test. Measured 2026-11-05 on a 25.1V pack with
+# the wheels free, taking the smaller of the forward and reverse magnitudes:
+#   M1 fwd 9768 / rev 9915 -> 9768   (~210 RPM at the output shaft)
+#   M2 fwd 10841 / rev 10550 -> 10550 (~227 RPM)
+# Motion Studio's auto-tune reported 10560 and 11220, roughly 7% higher. These
+# measured figures are the ones the step test validated, so they are preferred.
+#
+# Unloaded, so this is an upper bound: under load the wheels cannot reach it and
+# the PI terms make up the difference.
+#
+# The 8% M1/M2 spread is real and persists across both measurements, but it only
+# mattered in DUTY CYCLE mode, where the faster motor simply ran faster and the
+# rover curved left. Under velocity PID each wheel closes its own loop and hit
+# its target to within 0.03% in the step test. Max commanded speed is 0.3 m/s =
+# 2522 counts/s, 26% of the weaker motor, so the asymmetry never comes into play.
 MOTORS = {
     "M1": {
-        "velocity": {"p": 5.09039, "i": 0.27892, "d": 0.0, "qpps": 10560},
+        "velocity": {"p": 5.09039, "i": 0.27892, "d": 0.0, "qpps": 9768},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
     "M2": {
-        "velocity": {"p": 5.24083, "i": 0.35532, "d": 0.0, "qpps": 11220},
+        "velocity": {"p": 5.24083, "i": 0.35532, "d": 0.0, "qpps": 10550},
         "position": {"p": 0.0, "i": 0.0, "d": 0.0,
                      "imax": 0, "deadzone": 0, "min": POS_MIN, "max": POS_MAX},
     },
