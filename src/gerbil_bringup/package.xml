@@ -35,8 +35,13 @@
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <!-- Nav2 plugins selected in config/nav2_params.yaml -->
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
-  <!-- Wraps RPP so a badly misaligned start becomes an in-place rotation -->
+  <!-- Wraps the primary controller so a badly misaligned start becomes an
+       in-place rotation instead of a tight arc -->
   <exec_depend>nav2_rotation_shim_controller</exec_depend>
+  <!-- DWB is the primary controller the shim hands off to -->
+  <exec_depend>nav2_dwb_controller</exec_depend>
+  <!-- Kept although not currently selected: the documented fallback if DWB
+       oscillates. Swapping back is one plugin line, so keep it installed. -->
   <exec_depend>nav2_smac_planner</exec_depend>
   <!-- scripts/aruco_detector.py (not in any launch file) -->
   <exec_depend>rclpy</exec_depend>
