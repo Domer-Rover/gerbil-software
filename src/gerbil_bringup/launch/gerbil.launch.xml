@@ -6,17 +6,7 @@
          wheels still, odometry integrating perfectly, real /scan. Defaults
          should give the real robot; ask for the simulation explicitly. -->
     <arg name="use_mock_hardware" default="false" />
-    <!-- FALSE by default since 2026-11-10. Velocity PID is tuned per motor
-         (M1 P=5.09038 I=0.27892 QPPS=9788, M2 P=5.24083 I=0.35532 QPPS=10556),
-         saved to the board's NVM, and validated: the step test tracked every
-         commanded speed within 0.02%, and the 3 m, 4 m and 360 deg drive tests
-         were all run in this mode.
-         It defaulted to true while velocity PID had never worked. Duty cycle is
-         OPEN LOOP, so the 8% QPPS asymmetry between the motors reappears as a
-         left curve and the odometry Nav2 depends on degrades.
-         Pass use_duty_cycle:=true to fall back, e.g. if the board loses its
-         NVM tune or an encoder comes unplugged. -->
-    <arg name="use_duty_cycle" default="false" description="'true' = open-loop duty cycle. 'false' = RoboClaw velocity PID, which is now tuned and saved to NVM and is the better choice." />
+    <arg name="use_duty_cycle" default="true" description="false = RoboClaw velocity PID (needs encoders + tuned PID)" />
     <arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <arg name="lidar_port" default="/dev/gerbil_lidar" />  <!-- needs udev/99-gerbil.rules installed -->
     <arg name="use_twist_mux" default="true" description="arbitrate joystick / keyboard / nav2. Needs ros-humble-twist-mux. Turn OFF only to drive a single source straight into the controller." />
