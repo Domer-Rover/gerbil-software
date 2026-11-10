@@ -274,11 +274,18 @@ global_costmap:
       # footprint and Nav2 would have planned paths that clipped them.
       # Expressed about base_link, which sits at the WHEEL AXLE MIDPOINT, so
       # this polygon is strongly asymmetric - the rover trails its own axle.
-      #   chassis    x from -0.5496 to +0.0600   (centre at chassis_x -0.2448)
-      #   wheel span y +/-0.2360                 (separation 0.44 + tyre 0.032)
-      # Rounded outward for margin. Derived in mobile_base.xacro - if
+      # Recomputed after axle_from_front was MEASURED at 0.8655 in (2026-11-10):
+      #   chassis      x from -0.5876 to +0.0220  (centre at chassis_x -0.2828)
+      #   wheel tangent x        to     +0.0474   <- further forward than the
+      #                chassis, because the axle sits 0.022 from the front edge
+      #                while the wheels have a 0.0474 radius, so the tyres
+      #                protrude 1 inch past the acrylic. The front of this
+      #                polygon tracks the WHEELS, not the chassis edge.
+      #   caster rear  x to     -0.5622           (inside the chassis)
+      #   wheel span   y +/-0.2360                (separation 0.44 + tyre 0.032)
+      # Rounded outward 4mm for margin. Derived in mobile_base.xacro - if
       # axle_from_front changes there, recompute these four corners.
-      footprint: "[[-0.55, -0.24], [-0.55, 0.24], [0.07, 0.24], [0.07, -0.24]]"
+      footprint: "[[-0.59, -0.24], [-0.59, 0.24], [0.05, 0.24], [0.05, -0.24]]"
       resolution: 0.05
       rolling_window: true
       # LIMIT WORTH KNOWING: 20x20 m centred on the rover, so a goal more than
@@ -326,7 +333,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        # 0.62, just over the CIRCUMSCRIBED radius of 0.6001. That is large,
+        # 0.65, just over the CIRCUMSCRIBED radius of 0.6369. That is large,
         # and deliberately so. Because base_link is at the axle the footprint
         # is asymmetric, giving an inscribed radius of only 0.07 - and the
         # costmap only marks cells as definitely-colliding within the
@@ -345,7 +352,7 @@ global_costmap:
         # halve the swept radius and make the footprint symmetric again. The
         # software alternative is SmacPlannerLattice, which does full SE2
         # footprint collision checking instead of point-plus-inflation.
-        inflation_radius: 0.62
+        inflation_radius: 0.65
         cost_scaling_factor: 2.5       # sharper falloff, less pink spread
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's
@@ -377,11 +384,18 @@ local_costmap:
       # footprint and Nav2 would have planned paths that clipped them.
       # Expressed about base_link, which sits at the WHEEL AXLE MIDPOINT, so
       # this polygon is strongly asymmetric - the rover trails its own axle.
-      #   chassis    x from -0.5496 to +0.0600   (centre at chassis_x -0.2448)
-      #   wheel span y +/-0.2360                 (separation 0.44 + tyre 0.032)
-      # Rounded outward for margin. Derived in mobile_base.xacro - if
+      # Recomputed after axle_from_front was MEASURED at 0.8655 in (2026-11-10):
+      #   chassis      x from -0.5876 to +0.0220  (centre at chassis_x -0.2828)
+      #   wheel tangent x        to     +0.0474   <- further forward than the
+      #                chassis, because the axle sits 0.022 from the front edge
+      #                while the wheels have a 0.0474 radius, so the tyres
+      #                protrude 1 inch past the acrylic. The front of this
+      #                polygon tracks the WHEELS, not the chassis edge.
+      #   caster rear  x to     -0.5622           (inside the chassis)
+      #   wheel span   y +/-0.2360                (separation 0.44 + tyre 0.032)
+      # Rounded outward 4mm for margin. Derived in mobile_base.xacro - if
       # axle_from_front changes there, recompute these four corners.
-      footprint: "[[-0.55, -0.24], [-0.55, 0.24], [0.07, 0.24], [0.07, -0.24]]"
+      footprint: "[[-0.59, -0.24], [-0.59, 0.24], [0.05, 0.24], [0.05, -0.24]]"
       plugins: ["obstacle_layer", "inflation_layer"]   # add a ZED pointcloud voxel_layer here once LIDAR-only baseline is proven
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -424,7 +438,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.62         # see the global_costmap note above
+        inflation_radius: 0.65         # see the global_costmap note above
         cost_scaling_factor: 2.5
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's

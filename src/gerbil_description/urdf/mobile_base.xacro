@@ -29,10 +29,14 @@
          unmodelled translation.
          axle_from_front is the ONLY number to change if the wheels move or
          get re-measured. Everything else is derived from it.
-         WARNING - 0.06 is an ESTIMATE inherited from the original URDF, never
-         tape-measured. Measure front edge of the acrylic to the centre of the
-         wheel axle and correct it. Every offset below shifts with it. -->
-    <xacro:property name="axle_from_front" value="0.06" />
+         MEASURED 2026-11-10 at 0.8655 in from the front edge of the acrylic to
+         the centre of the wheel axle. This replaced a 0.06 estimate inherited
+         from the original URDF, shifting every offset below by -0.038 m.
+         CONSEQUENCE worth knowing - the axle is only 0.022 m from the front
+         edge while the wheels have a 0.0474 m radius, so the tyres protrude
+         0.0254 m IN FRONT of the chassis. The Nav2 footprint has to reach the
+         wheel tangent, not the chassis edge. -->
+    <xacro:property name="axle_from_front" value="0.021984" />  <!-- 0.8655 in -->
     <!-- Chassis centre expressed in the new base_link frame. Negative because
          the rover trails its own axle. -->
     <xacro:property name="chassis_x" value="${-(base_length / 2.0 - axle_from_front)}" />
