@@ -16,11 +16,10 @@ from typing import Callable, Dict, List, Optional
 
 from PyQt5.QtCore import QProcess, QSettings, Qt, QTimer, QUrl
 from PyQt5.QtGui import QDesktopServices, QFont
-from PyQt5.QtNetwork import QAbstractSocket, QTcpSocket
 from PyQt5.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
     QGridLayout, QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
-    QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter,
+    QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox, QSplitter,
     QTabWidget, QVBoxLayout, QWidget,
 )
 
@@ -53,7 +52,7 @@ class Settings:
 
     DEFAULTS = {
         'host': 'gerbil',
-        'workspace': '~/gerbil-software',
+        'workspace': '~/domerrover/gerbil-software',   # where add_dev_user.sh clones
         'ros_distro': 'humble',
         'domain_id': '',
         'log_dir': '~/.ros/mission_logs',
@@ -232,7 +231,11 @@ class MainWindow(QMainWindow):
         self.registry = registry
         self.settings = Settings(registry.robot)
         self.setWindowTitle(f'Mission Launcher: {registry.robot}')
-        self.resize(1200, 850)
+        # Fit the screen: at 125-150% Windows scaling a fixed 1200x850 is
+        # taller than a laptop display and pushes the logs off the bottom
+        screen = QApplication.primaryScreen().availableGeometry()
+        self.resize(min(1200, int(screen.width() * 0.9)),
+                    min(850, int(screen.height() * 0.9)))
 
         self.procs = set()               # keeps running QProcesses alive
         self.sessions: Dict[str, str] = {}    # session -> run id
@@ -247,11 +250,7 @@ class MainWindow(QMainWindow):
         self.check_timer = QTimer(self, singleShot=True, timeout=self.run_checks)
         self.check_gen = 0              # bumped per launch; stale results are dropped
         self.check_running = False
-        self.fox_sock = QTcpSocket(self)
-        self.fox_sock.connected.connect(lambda: self.on_foxglove_result(True))
-        # errorOccurred is Qt 5.15+; Ubuntu 20.04's apt PyQt5 only has error
-        error_signal = getattr(self.fox_sock, 'errorOccurred', None) or self.fox_sock.error
-        error_signal.connect(lambda _e: self.on_foxglove_result(False))
+        self.foxglove_listening = False     # from the status poll, checked on the rover
 
         self._build_ui()
         self.resolve_host()
@@ -277,7 +276,7 @@ class MainWindow(QMainWindow):
         self.stop_all_btn = QPushButton('STOP ALL')
         self.stop_all_btn.setStyleSheet(
             f'QPushButton {{ background:{RED}; color:white; font-weight:bold;'
-            ' padding:8px 18px; }}')
+            ' padding:8px 18px; }')
         self.stop_all_btn.clicked.connect(self.stop_all)
         for w in (self.host_label, self.link_light, self.fox_light, self.session_label):
             top.addWidget(w)
@@ -287,8 +286,9 @@ class MainWindow(QMainWindow):
             top.addWidget(w)
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._missions_tab(), 'Missions')
-        self.tabs.addTab(self._dev_tab(), 'Dev')
+        # Scrollable, so on a short screen the tabs shrink instead of the logs
+        self.tabs.addTab(scrollable(self._missions_tab()), 'Missions')
+        self.tabs.addTab(scrollable(self._dev_tab()), 'Dev')
 
         # Health lights + logs, shared by both tabs
         health_box = QGroupBox('Health')
@@ -314,6 +314,12 @@ class MainWindow(QMainWindow):
         split.addWidget(self.tabs)
         split.addWidget(bottom)
         split.setSizes([430, 420])
+        # Neither half can be dragged (or squeezed) out of sight
+        split.setCollapsible(0, False)
+        split.setCollapsible(1, False)
+        bottom.setCollapsible(0, False)
+        bottom.setCollapsible(1, False)
+        bottom.setMinimumHeight(180)
 
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -495,6 +501,7 @@ class MainWindow(QMainWindow):
                 self.poll_failures = 0
                 self.reachable = True
                 self.sessions = remote.parse_sessions(output)
+                self.foxglove_listening = remote.parse_foxglove_listening(output)
             else:
                 # One dropped poll on a weak field link is not "unreachable"
                 self.poll_failures += 1
@@ -508,7 +515,8 @@ class MainWindow(QMainWindow):
                 self.refresh_launch_files()
             self.update_ui()
 
-        self.ssh(remote.list_sessions_script(), done, echo=False)
+        self.ssh(remote.list_sessions_script(self.settings.get('foxglove_port')), done,
+                 echo=False)
 
     def update_ui(self):
         active = self.active_launch()
@@ -536,6 +544,16 @@ class MainWindow(QMainWindow):
         self.build_btn.setEnabled(bool(self.reachable) and not building)
         self.build_stop_btn.setEnabled(building)
         self.stop_all_btn.setEnabled(self.reachable is not False)
+
+        port = self.settings.get('foxglove_port')
+        if not self.reachable:
+            self.fox_light.set(GRAY, 'foxglove: ?')
+        elif self.foxglove_listening:
+            self.fox_light.set(GREEN, f'foxglove: up :{port}')
+        elif active:
+            self.fox_light.set(RED, f'foxglove: down :{port}')
+        else:
+            self.fox_light.set(GRAY, 'foxglove: idle')
 
         # Compared by run id, so a restart of the same session is a new run
         if active and self.tailing.get('launch') != self.sessions[active]:
@@ -619,26 +637,6 @@ class MainWindow(QMainWindow):
                 self.link_light.set(GREEN, f'link: {rtt:.0f} ms')
 
         self.run(remote.ping_argv(self.hostname, WINDOWS), done)
-        self.check_foxglove()
-
-    def check_foxglove(self):
-        """TCP-connect to the bridge port; one probe per ping interval."""
-        sock = self.fox_sock
-        port = self.settings.get('foxglove_port')
-        if sock.state() in (QAbstractSocket.HostLookupState,
-                            QAbstractSocket.ConnectingState):
-            self.fox_light.set(RED, f'foxglove: no answer :{port}')
-        sock.abort()
-        if not self.active_launch():
-            self.fox_light.set(GRAY, 'foxglove: idle')
-            return
-        sock.connectToHost(self.hostname, port)
-
-    def on_foxglove_result(self, ok: bool):
-        port = self.settings.get('foxglove_port')
-        self.fox_light.set(GREEN if ok else RED,
-                           f'foxglove: {"up" if ok else "down"} :{port}')
-        self.fox_sock.abort()
 
     def open_foxglove(self):
         url = remote.foxglove_url(self.hostname, self.settings.get('foxglove_port'))
@@ -938,6 +936,14 @@ class MainWindow(QMainWindow):
             if proc is not None:
                 proc.kill()
         super().closeEvent(event)
+
+
+def scrollable(widget: QWidget) -> QScrollArea:
+    area = QScrollArea()
+    area.setWidgetResizable(True)
+    area.setFrameShape(QScrollArea.NoFrame)
+    area.setWidget(widget)
+    return area
 
 
 def tail_alive(proc: Optional[QProcess]) -> bool:

@@ -57,6 +57,20 @@ def test_parse_sessions_keeps_only_launcher_sessions():
     assert not remote.is_launch_session('build')
 
 
+def test_foxglove_checked_on_the_rover():
+    # No port: sessions only, no ss
+    assert 'ss -ltnH' not in remote.list_sessions_script()
+    script = remote.list_sessions_script(8765)
+    assert 'ss -ltnH "sport = :8765"' in script
+    # The script must still succeed when nothing listens
+    assert script.rstrip().endswith('true')
+    out = 'mission_delivery 1700000100\nFOXGLOVE_LISTENING\n'
+    assert remote.parse_foxglove_listening(out)
+    assert not remote.parse_foxglove_listening('mission_delivery 1700000100\n')
+    # The marker is not mistaken for a session
+    assert list(remote.parse_sessions(out)) == ['mission_delivery']
+
+
 def test_render_launch_args():
     rendered = remote.render_launch_args(
         {'use_mock_hardware': True, 'launch_imu': False, 'foxglove_port': 8765})

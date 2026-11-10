@@ -49,7 +49,7 @@ KEEPALIVE_OPTIONS = ['-o', 'ServerAliveInterval=2', '-o', 'ServerAliveCountMax=3
 @dataclass
 class Connection:
     host: str                          # ssh destination: alias, host, or user@host
-    workspace: str = '~/gerbil-software'
+    workspace: str = '~/domerrover/gerbil-software'   # where add_dev_user.sh clones
     ros_distro: str = 'humble'
     domain_id: Optional[int] = None    # None leaves ROS_DOMAIN_ID unset
     log_dir: str = '~/.ros/mission_logs'
@@ -126,9 +126,27 @@ def parse_sessions(output: str) -> Dict[str, str]:
     return sessions
 
 
-def list_sessions_script() -> str:
+FOXGLOVE_LISTENING = 'FOXGLOVE_LISTENING'
+
+
+def list_sessions_script(foxglove_port: Optional[int] = None) -> str:
+    """tmux sessions, plus whether foxglove_bridge's port is listening.
+
+    The port is checked on the rover with `ss` rather than by connecting
+    from the laptop: foxglove_bridge logs an ERROR for every client that
+    connects without completing its handshake, which every few seconds
+    buried the launch log.
+    """
     # No tmux server running means no sessions, not an error
-    return "tmux ls -F '#S #{session_created}' 2>/dev/null || true"
+    script = "tmux ls -F '#S #{session_created}' 2>/dev/null || true"
+    if foxglove_port:
+        script += (f'; ss -ltnH "sport = :{int(foxglove_port)}" 2>/dev/null'
+                   f' | grep -q . && echo {FOXGLOVE_LISTENING}; true')
+    return script
+
+
+def parse_foxglove_listening(output: str) -> bool:
+    return any(line.strip() == FOXGLOVE_LISTENING for line in output.splitlines())
 
 
 # ---------------------------------------------------------------- ros env
