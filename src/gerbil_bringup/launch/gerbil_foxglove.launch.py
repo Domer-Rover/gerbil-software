@@ -23,8 +23,11 @@ def generate_launch_description():
 
     use_duty_cycle_arg = DeclareLaunchArgument(
         'use_duty_cycle',
-        default_value='true',
-        description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
+        # False: velocity PID is tuned, in NVM, and validated by the step test
+        # and every drive test. Duty cycle is open loop and reintroduces the
+        # 8% motor asymmetry as a left curve. Pass true to fall back.
+        default_value='false',
+        description="true = open-loop duty cycle. false = RoboClaw velocity PID, which is tuned, saved to NVM, and the better choice."
     )
 
     launch_lidar_arg = DeclareLaunchArgument(
