@@ -10,21 +10,11 @@ client. Windows 10/11 already ships OpenSSH.
 
 ## Setup
 
-1. **Key-based SSH to the Jetson.** The GUI never prompts for a password.
-
-   ```bash
-   ssh-keygen -t ed25519          # if you have no key yet
-   ssh-copy-id <user>@<jetson>    # Windows: append ~/.ssh/id_ed25519.pub to the
-                                  # Jetson's ~/.ssh/authorized_keys by hand
-   ```
-
-   Optionally, add an alias to `~/.ssh/config`:
-
-   ```
-   Host gerbil
-       HostName 192.168.1.40
-       User <user>
-   ```
+1. **Key-based SSH to the Jetson.** The GUI never prompts for a password, so
+   `ssh <user>@<jetson>` must log in without one. Follow
+   [First login in docs/jetson-setup.md](../../docs/jetson-setup.md#first-login-developer-from-your-laptop),
+   which has the Windows command (Windows has no `ssh-copy-id`) and the
+   optional `Host gerbil` alias.
 
 2. **tmux on the Jetson**: `sudo apt install tmux`. The workspace must be
    built there, as usual.
@@ -42,6 +32,64 @@ client. Windows 10/11 already ships OpenSSH.
    On first start, open **Settings** and set the SSH host (`gerbil`, or
    `user@ip`). The workspace defaults to `~/domerrover/gerbil-software`, where
    `scripts/add_dev_user.sh` clones it; change it if yours is elsewhere.
+
+## How it fits together
+
+```
+LAPTOP                                    ROVER (Jetson)
+Mission Launcher ──ssh: start/stop────▶  tmux session mission_<id>
+                 ──ssh: tmux ls (3 s)──▶   └ ros2 launch: ros2_control, ZED, EKF,
+                 ◀─ssh: tail -F log────         twist_mux, foxglove_bridge :8765
+Foxglove         ◀─websocket :8765───────────────┘
+Terminal         ──ssh──▶ teleop_keyboard.sh / teleop_joystick.sh ──▶ twist_mux
+```
+
+- The GUI talks to the rover only over SSH, one short command at a time. The
+  launch lives in tmux on the rover, not in any SSH connection, so closing the
+  GUI or losing WiFi never stops it.
+- The ROS nodes talk to each other on the rover. The laptop is not on the ROS
+  network, which is why it needs no ROS install.
+- **Teleop is not part of any mission.** Run it in a terminal SSHed into the
+  rover; it reaches the controller through twist_mux (joystick > keyboard >
+  Nav2). Keyboard teleop works from the laptop over SSH. The joystick script
+  needs the gamepad plugged into the **rover**.
+
+## Running a session
+
+1. **Check the robot is free.** Teammates may be running something, possibly
+   from another account, which the GUI cannot see:
+
+   ```bash
+   ssh gerbil 'ps -eo user,etime,cmd | grep -E "[r]os2 launch|[c]omponent_container|[r]os2_control_node"'
+   ```
+
+   No output means free. A leftover `component_container` from a killed launch
+   holds the ZED; its owner can end it with `pkill -INT -f zed_container`.
+   Only one launch may drive the RoboClaw or open the ZED at a time.
+2. **Start the mission** in the GUI. Tick `use_mock_hardware` for a dry run.
+   Health lights go green 20 to 35 s after Start.
+3. **Drive** (optional), in a second terminal:
+
+   ```bash
+   ssh gerbil
+   ros2 run gerbil_bringup teleop_keyboard.sh     # or teleop_joystick.sh
+   SPEED=0.15 ros2 run gerbil_bringup teleop_keyboard.sh   # slower, indoors
+   ```
+
+   Keep the keyboard window focused. Letting go stops the wheels within about
+   a second (twist_mux and the controller each time out after 0.5 s). In
+   Autonomy, letting go hands control back to Nav2 instead.
+4. **Before the real motors** (mock unticked): the RoboClaw serial timeout
+   must be set, since it is what stops the wheels after Stop (see below):
+
+   ```bash
+   ssh gerbil 'cd ~/domerrover/gerbil-software && python3 scripts/serial_timeout.py'   # expect 0.2s, not DISABLED
+   ```
+
+   The script needs `pip3 install --user basicmicro` once per account. Test
+   with the wheels off the ground first.
+5. **Stop** in the GUI, then Ctrl-C the teleop terminal.
+6. **Results** stay on the rover in `~/.ros/mission_logs/` (see [Logs](#logs)).
 
 ## Missions tab
 
