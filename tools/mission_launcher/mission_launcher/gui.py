@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from typing import Callable, Dict, List, Optional
 
 from PyQt5.QtCore import QProcess, QSettings, Qt, QTimer, QUrl
@@ -34,6 +35,7 @@ CHECK_DELAY_MS = 20000          # let the ZED and EKF come up before checking
 UNREACHABLE_AFTER = 2           # consecutive failed polls before "unreachable"
 COMMAND_TIMEOUT_MS = 45000      # stop waits up to 15 s on the rover, plus margin
 SLOW_COMMAND_TIMEOUT_MS = 120000    # git pull over a weak link
+FOXGLOVE_GRACE_S = 45           # a mission's bridge may take this long to bind
 RECONNECT_LOG_LINES = 500       # history reloaded when a dropped log stream returns
 LOG_MAX_LINES = 5000
 
@@ -251,6 +253,8 @@ class MainWindow(QMainWindow):
         self.check_gen = 0              # bumped per launch; stale results are dropped
         self.check_running = False
         self.foxglove_listening = False     # from the status poll, checked on the rover
+        self.workspace_missing = False      # from the status poll too
+        self.launch_seen_at = 0.0           # monotonic time the current launch was detected
 
         self._build_ui()
         self.resolve_host()
@@ -502,6 +506,12 @@ class MainWindow(QMainWindow):
                 self.reachable = True
                 self.sessions = remote.parse_sessions(output)
                 self.foxglove_listening = remote.parse_foxglove_listening(output)
+                missing = remote.parse_workspace_missing(output)
+                if missing and not self.workspace_missing:
+                    self.output_log.append_text(
+                        f'[no {self.settings.get("workspace")}/install/setup.bash on the '
+                        'rover: wrong workspace in Settings, or not built yet]\n')
+                self.workspace_missing = missing
             else:
                 # One dropped poll on a weak field link is not "unreachable"
                 self.poll_failures += 1
@@ -515,19 +525,26 @@ class MainWindow(QMainWindow):
                 self.refresh_launch_files()
             self.update_ui()
 
-        self.ssh(remote.list_sessions_script(self.settings.get('foxglove_port')), done,
-                 echo=False)
+        self.ssh(remote.list_sessions_script(self.settings.get('foxglove_port'),
+                                             self.settings.get('workspace')),
+                 done, echo=False)
 
     def update_ui(self):
         active = self.active_launch()
         building = remote.BUILD_SESSION in self.sessions
-        # No launch during a build: it would load half-built files
-        can_start = bool(self.reachable) and active is None and not building
+        # No launch during a build: it would load half-built files. None without
+        # a built workspace either; the build button stays usable to fix that.
+        can_start = (bool(self.reachable) and active is None and not building
+                     and not self.workspace_missing)
 
         if self.reachable is None:
             self.session_label.setText('Running: ?')
         elif not self.reachable:
             self.session_label.setText('<b style="color:%s">rover unreachable</b>' % RED)
+        elif self.workspace_missing:
+            self.session_label.setText(
+                '<b style="color:%s">workspace not built: %s</b> (fix it in Settings)'
+                % (RED, self.settings.get('workspace')))
         else:
             parts = [f'Running: <b>{active or "nothing"}</b>']
             if building:
@@ -544,16 +561,6 @@ class MainWindow(QMainWindow):
         self.build_btn.setEnabled(bool(self.reachable) and not building)
         self.build_stop_btn.setEnabled(building)
         self.stop_all_btn.setEnabled(self.reachable is not False)
-
-        port = self.settings.get('foxglove_port')
-        if not self.reachable:
-            self.fox_light.set(GRAY, 'foxglove: ?')
-        elif self.foxglove_listening:
-            self.fox_light.set(GREEN, f'foxglove: up :{port}')
-        elif active:
-            self.fox_light.set(RED, f'foxglove: down :{port}')
-        else:
-            self.fox_light.set(GRAY, 'foxglove: idle')
 
         # Compared by run id, so a restart of the same session is a new run
         if active and self.tailing.get('launch') != self.sessions[active]:
@@ -572,9 +579,32 @@ class MainWindow(QMainWindow):
             self.build_tail = self.reconnect_tail(self.build_tail, remote.BUILD_SESSION,
                                                   self.build_log)
 
+        self.update_foxglove_light(active)
+
+    def update_foxglove_light(self, active: Optional[str]):
+        """Whether the bridge is listening on the rover (not laptop reachability).
+
+        Every mission includes the bridge, so a mission without it is red once
+        it has had time to bind; Dev launches often don't include it at all.
+        """
+        port = self.settings.get('foxglove_port')
+        if not self.reachable:
+            self.fox_light.set(GRAY, 'foxglove: ?')
+        elif self.foxglove_listening:
+            self.fox_light.set(GREEN, f'foxglove: listening :{port}')
+        elif not active:
+            self.fox_light.set(GRAY, 'foxglove: idle')
+        elif not active.startswith(remote.MISSION_PREFIX):
+            self.fox_light.set(GRAY, 'foxglove: not running')
+        elif time.monotonic() - self.launch_seen_at < FOXGLOVE_GRACE_S:
+            self.fox_light.set(AMBER, 'foxglove: starting')
+        else:
+            self.fox_light.set(RED, f'foxglove: not listening :{port}')
+
     def on_launch_detected(self, session: str):
         """A launch started, by us or anyone: follow its log and checks."""
         self.tailing['launch'] = self.sessions[session]
+        self.launch_seen_at = time.monotonic()
         self.launch_log.clear()
         self.launch_tail = self.restart_tail(self.launch_tail, session, self.launch_log)
         self.logs.setCurrentWidget(self.launch_log)
@@ -705,16 +735,18 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------ missions
 
-    def confirm_real_hardware(self, what: str) -> bool:
-        """Ask before a start that drives the real motors.
+    def confirm_real_hardware(self, what: str, args: Dict[str, object]) -> bool:
+        """Ask before a start that may drive the real motors; True = go ahead.
 
         The mock checkbox resets to unticked (real hardware) whenever the GUI
         restarts, so on the first rover test two runs meant as mock quietly
         used the real RoboClaw. Default answer is No.
         """
+        if not may_drive_real_hardware(args):
+            return True
         answer = QMessageBox.warning(
             self, 'Real motors',
-            f'{what} will run on the REAL hardware (use_mock_hardware is off).\n\n'
+            f'{what} will run on the REAL hardware (use_mock_hardware is not on).\n\n'
             'The wheels can move. Make sure the rover is clear or its wheels '
             'are off the ground.\n\nStart on real hardware?',
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -723,7 +755,7 @@ class MainWindow(QMainWindow):
     def start_mission(self, card: MissionCard):
         m = card.mission
         args = card.args()
-        if args.get('use_mock_hardware') is False and not self.confirm_real_hardware(m.title):
+        if not self.confirm_real_hardware(m.title, args):
             return
         script = remote.start_launch_script(
             self.conn(), card.session, self.registry.package, m.launch, args)
@@ -844,7 +876,7 @@ class MainWindow(QMainWindow):
         if missing:
             QMessageBox.warning(self, 'Missing arguments', 'Required: ' + ', '.join(missing))
             return
-        if values.get('use_mock_hardware') == 'false' and not self.confirm_real_hardware(launch):
+        if not self.confirm_real_hardware(launch, values):
             return
         # Only pass what differs from the launch file's own defaults
         args = {n: v for n, v in values.items()
@@ -935,6 +967,7 @@ class MainWindow(QMainWindow):
             self.reachable = None
             self.poll_failures = 0
             self.sessions = {}
+            self.workspace_missing = False      # rechecked against the new path
             self.tailing.clear()
             self.dev_launches.clear()
             for proc in (self.launch_tail, self.build_tail):
@@ -956,6 +989,16 @@ class MainWindow(QMainWindow):
             if proc is not None:
                 proc.kill()
         super().closeEvent(event)
+
+
+def may_drive_real_hardware(args: Dict[str, object]) -> bool:
+    """Anything but an explicit use_mock_hardware=true can reach the motors.
+
+    A missing argument counts as real: the bringup launch files default to
+    false, and a launch file without the argument may hardcode the hardware.
+    Checkbox values are bools, Dev-tab values are strings in any case.
+    """
+    return str(args.get('use_mock_hardware')).strip().lower() != 'true'
 
 
 def scrollable(widget: QWidget) -> QScrollArea:

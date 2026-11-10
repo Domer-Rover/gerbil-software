@@ -31,7 +31,9 @@ client. Windows 10/11 already ships OpenSSH.
 
    On first start, open **Settings** and set the SSH host (`gerbil`, or
    `user@ip`). The workspace defaults to `~/domerrover/gerbil-software`, where
-   `scripts/add_dev_user.sh` clones it; change it if yours is elsewhere.
+   `scripts/add_dev_user.sh` clones it for personal accounts. The shared
+   `domerrover` account uses `~/gerbil-software`. If the path is wrong or not
+   built, the top bar says **workspace not built** and Start stays disabled.
 
 ## How it fits together
 
@@ -80,7 +82,8 @@ Terminal         ──ssh──▶ teleop_keyboard.sh / teleop_joystick.sh ─�
    a second (twist_mux and the controller each time out after 0.5 s). In
    Autonomy, letting go hands control back to Nav2 instead.
 4. **Before the real motors** (mock unticked): the RoboClaw serial timeout
-   must be set, since it is what stops the wheels after Stop (see below):
+   must be set. It stops the wheels if a launch is ever killed rather than
+   shut down cleanly (see Stop below):
 
    ```bash
    ssh gerbil 'cd ~/domerrover/gerbil-software && python3 scripts/serial_timeout.py'   # expect 0.2s, not DISABLED
@@ -105,16 +108,21 @@ is fixed in its `mission_<id>.launch.py`.
 - **use_mock_hardware** is unticked (real motors) by default and resets every
   time the GUI restarts, so starting with it off asks for confirmation first.
 - **Stop** sends Ctrl-C, waits up to 15 s for a clean shutdown, then kills the
-  session. Once the driver goes quiet, the RoboClaw's serial timeout is what
-  stops the wheels: `gerbil_hw` sends no zero command on shutdown. Keep that
-  timeout set (`python3 scripts/serial_timeout.py`, 0.2 s); at 0 the motors
-  would keep their last command. Tested on Gerbil: the wheels stop within ~1 s.
+  session. On a clean shutdown `gerbil_hw` zeroes both motors as the
+  controllers deactivate. If the process is killed instead (no clean exit
+  within 15 s, a crash), nothing sends that zero, and the RoboClaw's own serial
+  timeout is what stops the wheels. Keep it set (`python3
+  scripts/serial_timeout.py`, 0.2 s); at 0 a killed launch would leave the
+  motors on their last command. Tested on Gerbil: the wheels stop within ~1 s.
 - **STOP ALL** does the same for every launcher session.
 - **Health** checks each mission's topics about 20 s after start, and again
   whenever you press **Run checks**.
 - The top bar shows the link round-trip time and whether the Foxglove bridge's
   port is listening on the rover (checked there, so it adds nothing to the
-  bridge's log). A slow or lost link turns amber or red for teleop missions.
+  bridge's log; it does not prove the laptop can reach the port). For a
+  mission it is amber while starting and red if the bridge never binds; Dev
+  launches without a bridge just show "not running". A slow or lost link
+  turns amber or red for teleop missions.
   Autonomy only reports the link, since it has to keep running without it.
 
 Closing the GUI leaves the mission running. Reopening it picks the mission

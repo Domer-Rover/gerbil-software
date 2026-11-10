@@ -71,6 +71,16 @@ def test_foxglove_checked_on_the_rover():
     assert list(remote.parse_sessions(out)) == ['mission_delivery']
 
 
+def test_workspace_checked_on_the_rover():
+    script = remote.list_sessions_script(8765, '~/domerrover/gerbil-software')
+    assert ('test -f "$HOME"/domerrover/gerbil-software/install/setup.bash'
+            in script)
+    assert script.rstrip().endswith('true')
+    assert remote.parse_workspace_missing('WORKSPACE_MISSING\n')
+    assert not remote.parse_workspace_missing('FOXGLOVE_LISTENING\n')
+    assert list(remote.parse_sessions('WORKSPACE_MISSING\n')) == []
+
+
 def test_render_launch_args():
     rendered = remote.render_launch_args(
         {'use_mock_hardware': True, 'launch_imu': False, 'foxglove_port': 8765})

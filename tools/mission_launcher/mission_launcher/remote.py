@@ -127,26 +127,41 @@ def parse_sessions(output: str) -> Dict[str, str]:
 
 
 FOXGLOVE_LISTENING = 'FOXGLOVE_LISTENING'
+WORKSPACE_MISSING = 'WORKSPACE_MISSING'
 
 
-def list_sessions_script(foxglove_port: Optional[int] = None) -> str:
-    """tmux sessions, plus whether foxglove_bridge's port is listening.
+def list_sessions_script(foxglove_port: Optional[int] = None,
+                         workspace: Optional[str] = None) -> str:
+    """tmux sessions, plus whether foxglove_bridge's port is listening and
+    whether the workspace is built.
 
     The port is checked on the rover with `ss` rather than by connecting
     from the laptop: foxglove_bridge logs an ERROR for every client that
     connects without completing its handshake, which every few seconds
-    buried the launch log.
+    buried the launch log. So it says the bridge is listening, not that the
+    laptop can reach it.
+
+    The workspace check catches a wrong Settings path up front: personal
+    accounts (add_dev_user.sh) clone under ~/domerrover/, the shared account
+    under ~/, and a wrong guess otherwise only shows as a failed Start.
     """
     # No tmux server running means no sessions, not an error
     script = "tmux ls -F '#S #{session_created}' 2>/dev/null || true"
     if foxglove_port:
         script += (f'; ss -ltnH "sport = :{int(foxglove_port)}" 2>/dev/null'
                    f' | grep -q . && echo {FOXGLOVE_LISTENING}; true')
+    if workspace:
+        script += (f'; test -f {remote_path(workspace)}/install/setup.bash'
+                   f' || echo {WORKSPACE_MISSING}; true')
     return script
 
 
 def parse_foxglove_listening(output: str) -> bool:
     return any(line.strip() == FOXGLOVE_LISTENING for line in output.splitlines())
+
+
+def parse_workspace_missing(output: str) -> bool:
+    return any(line.strip() == WORKSPACE_MISSING for line in output.splitlines())
 
 
 # ---------------------------------------------------------------- ros env
