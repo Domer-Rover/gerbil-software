@@ -221,7 +221,18 @@ behavior_server:
     # no "spin": the rover stalls pivoting in place, which is also why
     # use_rotate_to_heading is now true, so a heading error is corrected by
     # turning in place rather than only through recovery behaviours.
-    behavior_plugins: ["backup", "drive_on_heading", "wait", "assisted_teleop"]
+    # "spin" WAS MISSING and is required. No custom BT is configured, so Nav2
+    # uses its default navigate_to_pose_w_replanning_and_recovery.xml, whose
+    # recovery branch ticks Spin between clearing the costmaps and backing up.
+    # Without the plugin loaded that action server does not exist, the Spin
+    # step fails, and recovery silently degrades to BackUp alone -- in exactly
+    # the situation where recovery matters.
+    # assisted_teleop is kept but is NOT wired to anything: it expects an
+    # operator twist stream, and teleop here goes through twist_mux instead.
+    # Harmless, and the default BT never calls it. Drop it if trimming.
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait", "assisted_teleop"]
+    spin:
+      plugin: "nav2_behaviors/Spin"
     backup:
       plugin: "nav2_behaviors/BackUp"
     drive_on_heading:
@@ -235,9 +246,15 @@ behavior_server:
     robot_base_frame: base_footprint
     transform_tolerance: 0.5
     simulate_ahead_time: 2.0
-    max_rotational_vel: 0.8
+    # 0.5 to match angular.z.max_velocity in gerbil_controllers.yaml. Was 0.8,
+    # which the controller clamps to 0.5 anyway, so the Spin behaviour
+    # mispredicted how long its own rotation would take and could time out
+    # before finishing the turn.
+    max_rotational_vel: 0.5
     min_rotational_vel: 0.1
-    rotational_acc_lim: 0.4
+    # 0.7 matches max_angular_accel used by the rotation shim and RPP, so all
+    # three agree on how fast the rover may change yaw rate.
+    rotational_acc_lim: 0.7
 
 # Both costmaps use odom frame with rolling windows — no static map needed.
 # Footprint: rectangular bounding box sized for the rear axle (widest point).
