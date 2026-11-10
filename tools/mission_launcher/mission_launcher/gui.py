@@ -705,10 +705,28 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------ missions
 
+    def confirm_real_hardware(self, what: str) -> bool:
+        """Ask before a start that drives the real motors.
+
+        The mock checkbox resets to unticked (real hardware) whenever the GUI
+        restarts, so on the first rover test two runs meant as mock quietly
+        used the real RoboClaw. Default answer is No.
+        """
+        answer = QMessageBox.warning(
+            self, 'Real motors',
+            f'{what} will run on the REAL hardware (use_mock_hardware is off).\n\n'
+            'The wheels can move. Make sure the rover is clear or its wheels '
+            'are off the ground.\n\nStart on real hardware?',
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        return answer == QMessageBox.Yes
+
     def start_mission(self, card: MissionCard):
         m = card.mission
+        args = card.args()
+        if args.get('use_mock_hardware') is False and not self.confirm_real_hardware(m.title):
+            return
         script = remote.start_launch_script(
-            self.conn(), card.session, self.registry.package, m.launch, card.args())
+            self.conn(), card.session, self.registry.package, m.launch, args)
         self.start_launch(script, f'start {m.title}')
 
     def stop_card(self, card: MissionCard):
@@ -825,6 +843,8 @@ class MainWindow(QMainWindow):
                    if not v and self.dev_arg_defaults.get(n) is None]
         if missing:
             QMessageBox.warning(self, 'Missing arguments', 'Required: ' + ', '.join(missing))
+            return
+        if values.get('use_mock_hardware') == 'false' and not self.confirm_real_hardware(launch):
             return
         # Only pass what differs from the launch file's own defaults
         args = {n: v for n, v in values.items()
