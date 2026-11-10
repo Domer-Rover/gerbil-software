@@ -32,12 +32,16 @@ client. Windows 10/11 already ships OpenSSH.
 3. **Install the GUI on the laptop**, from this directory:
 
    ```bash
-   pip install -e .               # or: apt install python3-pyqt5 python3-yaml
-   python -m mission_launcher
+   python -m venv .venv           # a private Python for the app (ignored by git)
+   .venv/bin/pip install -e .     # Windows: .venv\Scripts\pip install -e .
+   .venv/bin/python -m mission_launcher    # Windows: .venv\Scripts\python ...
    ```
 
+   On Ubuntu, `apt install python3-pyqt5 python3-yaml` works instead of the venv.
+
    On first start, open **Settings** and set the SSH host (`gerbil`, or
-   `user@ip`) and the workspace path on the rover.
+   `user@ip`). The workspace defaults to `~/domerrover/gerbil-software`, where
+   `scripts/add_dev_user.sh` clones it; change it if yours is elsewhere.
 
 ## Missions tab
 
@@ -50,13 +54,19 @@ is fixed in its `mission_<id>.launch.py`.
   can run at a time, because they all hold the RoboClaw serial port. Nothing
   can launch while a `colcon build` runs either. The rover enforces both
   rules under a lock, so two laptops pressing Start together cannot both win.
+- **use_mock_hardware** is unticked (real motors) by default and resets every
+  time the GUI restarts, so starting with it off asks for confirmation first.
 - **Stop** sends Ctrl-C, waits up to 15 s for a clean shutdown, then kills the
-  session. Ctrl-C comes first so that ros2_control stops the motors.
+  session. Once the driver goes quiet, the RoboClaw's serial timeout is what
+  stops the wheels: `gerbil_hw` sends no zero command on shutdown. Keep that
+  timeout set (`python3 scripts/serial_timeout.py`, 0.2 s); at 0 the motors
+  would keep their last command. Tested on Gerbil: the wheels stop within ~1 s.
 - **STOP ALL** does the same for every launcher session.
 - **Health** checks each mission's topics about 20 s after start, and again
   whenever you press **Run checks**.
-- The top bar shows the link round-trip time and whether the Foxglove bridge
-  is up. A slow or lost link turns amber or red for teleop missions.
+- The top bar shows the link round-trip time and whether the Foxglove bridge's
+  port is listening on the rover (checked there, so it adds nothing to the
+  bridge's log). A slow or lost link turns amber or red for teleop missions.
   Autonomy only reports the link, since it has to keep running without it.
 
 Closing the GUI leaves the mission running. Reopening it picks the mission
