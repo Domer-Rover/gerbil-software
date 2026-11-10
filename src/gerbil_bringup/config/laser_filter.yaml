@@ -4,14 +4,22 @@
 # antennas). It works in base_link via TF, so it does not depend on the
 # LIDAR's angle convention or mounting rotation.
 #
-# filter2 keeps only the forward half of the scan.
-#   Antennas sit at x=-0.3556, y=+/-0.254 in base_link, i.e. ~145 deg off the
-#   front. They were still showing up as obstacles with bounds [0, pi], which
-#   means [0, pi] was keeping the REAR half -- the LD19 driver runs with
-#   laser_scan_dir=true, which flips the direction the URDF rotation assumed.
-#   Hence [pi, 2pi] here.
-#   VERIFY in Foxglove: stand in front of the rover; you should see returns.
-#   If the front is blank and the rear is populated, swap back to [0, 3.1416].
+# filter2 keeps only the forward 180 deg, roughly left wheel round to right
+# wheel. The rear half is dropped because the scan plane sits just 0.221 m off
+# the ground and looks back ACROSS the rover, so the battery and its mould
+# return as a permanent obstacle a few centimetres off the nose.
+#
+# BOUNDS ARE COUPLED TO lidar_joint's YAW in mobile_base.xacro, measured as
+# -pi/2 on 2026-11-05. A ray at laser angle a points at a - pi/2 in base_link,
+# so the forward half is:
+#       a - pi/2 in [-pi/2, pi/2]   ->   a in [0, pi]
+# These are angles in the PUBLISHED scan, which already has the driver's
+# laser_scan_dir=true negation applied, so do not apply it a second time.
+# If that yaw ever changes, redo this arithmetic.
+#
+# LaserScanAngularBoundsFilter KEEPS what is inside the bounds. There is an
+# in-place variant that removes it instead, so do not swap them by accident.
+
 scan_to_scan_filter_chain:
   ros__parameters:
     filter1:
@@ -21,7 +29,7 @@ scan_to_scan_filter_chain:
         box_frame: base_link
         min_x: -0.33   # chassis is 0.61 long: half is 0.305, plus a small margin
         max_x:  0.33
-        min_y: -0.26   # wheel span 0.455 wide: half is 0.228, plus margin
+        min_y: -0.26   # separation 0.44 + tyre 0.032 -> outer faces 0.236, plus margin
         max_y:  0.26
         min_z: -1.0
         max_z:  1.0
@@ -31,5 +39,5 @@ scan_to_scan_filter_chain:
       name: front_180_only
       type: laser_filters/LaserScanAngularBoundsFilter
       params:
-        lower_angle: 3.1416
-        upper_angle: 6.2832
+        lower_angle: 0.0      # derivation in the header above
+        upper_angle: 3.1416

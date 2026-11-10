@@ -17,7 +17,9 @@
 namespace roboclaw_hardware_interface
 {
 
-MotorJoint::MotorJoint(const std::string joint_name, const int32_t qppr, const double max_duty_speed)
+MotorJoint::MotorJoint(
+  const std::string joint_name, const int32_t qppr,
+  const double max_duty_speed)
 : ticks_per_radian_(static_cast<double>(qppr) * 0.5 * M_1_PI),
   duty_per_rad_s_(32767.0 / max_duty_speed),
   name(joint_name)
@@ -33,8 +35,8 @@ int16_t MotorJoint::getDutyCycleCommand() const
 {
   double duty = velocity_command_ * duty_per_rad_s_;
   // Clamp to valid duty cycle range
-  if (duty > 32767.0) duty = 32767.0;
-  if (duty < -32767.0) duty = -32767.0;
+  if (duty > 32767.0) {duty = 32767.0;}
+  if (duty < -32767.0) {duty = -32767.0;}
   return static_cast<int16_t>(duty);
 }
 
@@ -43,14 +45,22 @@ double MotorJoint::getVelocityCommand() const
   return velocity_command_;
 }
 
-// Set the position given the current wheel encoder count
-void MotorJoint::setPositionState(const int32_t & encoder_count)
+// Update position and velocity from the current wheel encoder count
+void MotorJoint::setPositionState(const int32_t & encoder_count, const double dt)
 {
   if (initialized_encoder_count_) {
-    // Update the joint angle
-    position_state_ +=
+    const double delta_radians =
       static_cast<double>(encoder_count - prior_encoder_count_) / ticks_per_radian_;
+    position_state_ += delta_radians;
+    // Single-sample differentiation. At the 50Hz control rate one encoder tick
+    // is a small fraction of a radian, so this is usable but noisy; consumers
+    // that need a smooth signal should filter it. dt <= 0 means the caller had
+    // no valid period, so keep the previous value instead of dividing by zero.
+    if (dt > 0.0) {
+      velocity_state_ = delta_radians / dt;
+    }
   } else {
+    // First read only establishes the reference count. Velocity stays 0.
     initialized_encoder_count_ = true;
   }
   // Store the prior encoder count for next time

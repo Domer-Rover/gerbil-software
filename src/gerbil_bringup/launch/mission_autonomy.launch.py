@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""URC Autonomy mission: Nav2 + ArUco, with joystick override.
+"""URC Autonomy mission: Nav2 + ArUco.
 
 Includes gerbil_nav2.launch.py (LIDAR + ZED forced on) in velocity-PID mode
 for path tracking, plus GPS and the ArUco detector. GPS is published for
@@ -8,6 +8,9 @@ odom frame. Started by the mission launcher GUI (tools/mission_launcher), or
 by hand:
 
   ros2 launch gerbil_bringup mission_autonomy.launch.py
+
+For a joystick override, run `ros2 run gerbil_bringup teleop_joystick.sh` in a
+second terminal: twist_mux ranks the joystick above Nav2.
 """
 
 from launch import LaunchDescription
@@ -42,7 +45,6 @@ def generate_launch_description():
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_imu': LaunchConfiguration('launch_imu'),
-            'use_joystick': 'true',
             'use_duty_cycle': 'false',
             'launch_gps': 'true',
         }.items()

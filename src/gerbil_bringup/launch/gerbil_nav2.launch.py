@@ -27,12 +27,6 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    use_joystick_arg = DeclareLaunchArgument(
-        'use_joystick',
-        default_value='true',
-        description='Joystick override (recommended outdoors)'
-    )
-
     launch_gps_arg = DeclareLaunchArgument(
         'launch_gps',
         default_value='false',
@@ -74,7 +68,6 @@ def generate_launch_description():
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_rviz': 'false',
             'launch_zed': 'true',
-            'use_joystick': LaunchConfiguration('use_joystick'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_lidar': 'true',
             'launch_gps': LaunchConfiguration('launch_gps'),
@@ -102,7 +95,12 @@ def generate_launch_description():
         name='controller_server',
         output='screen',
         parameters=[nav2_params],
-        remappings=[('cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        # Nav2 publishes to the twist_mux input, NOT straight to the
+        # controller. twist_mux gives navigation priority 10, so a
+        # joystick (100) or keyboard (90) command preempts it instantly.
+        # Previously this remapped onto the controller topic directly,
+        # alongside teleop, and the robot obeyed whichever arrived last.
+        remappings=[('cmd_vel', '/cmd_vel_nav')],
     )
 
     planner_server = Node(
@@ -119,7 +117,12 @@ def generate_launch_description():
         name='behavior_server',
         output='screen',
         parameters=[nav2_params],
-        remappings=[('cmd_vel', '/diff_drive_controller/cmd_vel_unstamped')],
+        # Nav2 publishes to the twist_mux input, NOT straight to the
+        # controller. twist_mux gives navigation priority 10, so a
+        # joystick (100) or keyboard (90) command preempts it instantly.
+        # Previously this remapped onto the controller topic directly,
+        # alongside teleop, and the robot obeyed whichever arrived last.
+        remappings=[('cmd_vel', '/cmd_vel_nav')],
     )
 
     bt_navigator = Node(
@@ -149,7 +152,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         use_mock_hardware_arg,
-        use_joystick_arg,
         use_duty_cycle_arg,
         launch_gps_arg,
         launch_imu_arg,

@@ -55,7 +55,7 @@ missions:
 
   - id: autonomy
     title: Autonomy
-    description: Nav2 + ArUco, joystick override
+    description: Nav2 + ArUco (joystick override via teleop_joystick.sh)
     launch: mission_autonomy.launch.py
     args:
       use_mock_hardware: false

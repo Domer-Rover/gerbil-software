@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <string>
 #include <tuple>
+#include <type_traits>
 
 namespace roboclaw_serial
 {
@@ -179,6 +180,15 @@ struct Request
   static bool canRead() {return ReadCommand != Command::NONE;}
 
   static bool canWrite() {return WriteCommand != Command::NONE;}
+
+  // Whether every field has a fixed wire size, so the exact number of bytes
+  // in a read response (fields + 2-byte CRC) is known ahead of time. False
+  // for variable-length fields (e.g. std::string), whose response size can't
+  // be known until it's read.
+  static constexpr bool has_fixed_size_response = (std::is_arithmetic_v<Args> && ...);
+
+  static constexpr std::size_t response_size =
+    has_fixed_size_response ? (sizeof(Args) + ... + 0) + sizeof(uint16_t) : 0;
 
   ArgsTuple fields;
 };

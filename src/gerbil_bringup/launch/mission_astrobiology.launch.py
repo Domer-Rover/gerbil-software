@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """URC Astrobiology mission: teleop to a site, image it, tag its coordinates.
 
-Joystick + ZED + GPS on top of the Foxglove bringup. Started by the mission
-launcher GUI (tools/mission_launcher), or by hand:
+ZED + GPS on top of the Foxglove bringup. Started by the mission launcher GUI
+(tools/mission_launcher), or by hand:
 
   ros2 launch gerbil_bringup mission_astrobiology.launch.py
+
+Teleop is not part of the launch: drive with
+`ros2 run gerbil_bringup teleop_joystick.sh` (or teleop_keyboard.sh) in a
+second terminal; twist_mux forwards it to the controller.
 """
 
 from launch import LaunchDescription
@@ -38,7 +42,6 @@ def generate_launch_description():
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_imu': LaunchConfiguration('launch_imu'),
-            'use_joystick': 'true',
             'launch_zed': 'true',
             'launch_gps': 'true',
             'launch_lidar': 'false',

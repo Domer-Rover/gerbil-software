@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """URC Delivery mission: long-range teleop to astronauts across rough terrain.
 
-Joystick + ZED + GPS on top of the Foxglove bringup, with the ArUco detector
-optional for finding marked drop-off points. Started by the mission launcher
-GUI (tools/mission_launcher), or by hand:
+ZED + GPS on top of the Foxglove bringup, with the ArUco detector optional
+for finding marked drop-off points. Started by the mission launcher GUI
+(tools/mission_launcher), or by hand:
 
   ros2 launch gerbil_bringup mission_delivery.launch.py launch_aruco:=true
+
+Teleop is not part of the launch: drive with
+`ros2 run gerbil_bringup teleop_joystick.sh` (or teleop_keyboard.sh) in a
+second terminal; twist_mux forwards it to the controller.
 """
 
 from launch import LaunchDescription
@@ -47,7 +51,6 @@ def generate_launch_description():
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
             'launch_imu': LaunchConfiguration('launch_imu'),
-            'use_joystick': 'true',
             'launch_zed': 'true',
             'launch_gps': 'true',
             'launch_lidar': 'false',

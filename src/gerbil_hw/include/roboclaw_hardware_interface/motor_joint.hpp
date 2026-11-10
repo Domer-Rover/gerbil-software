@@ -38,8 +38,14 @@ private:
   // Position of the wheel in radians
   double position_state_ = 0;
 
+  // Measured velocity of the wheel in radians per second, differentiated from
+  // the encoder delta each cycle. Exported as a state interface so
+  // joint_state_broadcaster can publish it: without it /joint_states carries
+  // NaN velocities, which silently breaks any diagnostic that reads them.
+  double velocity_state_ = 0;
+
   // Store the prior encoder count for updating position state
-  int32_t prior_encoder_count_;
+  int32_t prior_encoder_count_ = 0;
   bool initialized_encoder_count_ = false;
 
 public:
@@ -60,11 +66,14 @@ public:
   // Return the current velocity command (rad/s)
   double getVelocityCommand() const;
 
-  // Set the position given the current wheel encoder count
-  void setPositionState(const int32_t & encoder_count);
+  // Update position and velocity from the current encoder count.
+  // dt is the control-loop period in seconds; pass <= 0 to skip the velocity
+  // update and keep the previous value rather than dividing by zero.
+  void setPositionState(const int32_t & encoder_count, const double dt = 0.0);
 
   // Accessor methods to enable ros2_control to access joint interface pointers
   inline double * getPositionStatePtr() {return &position_state_;}
+  inline double * getVelocityStatePtr() {return &velocity_state_;}
   inline double * getVelocityCommandPtr() {return &velocity_command_;}
 };
 }  // namespace roboclaw_hardware_interface

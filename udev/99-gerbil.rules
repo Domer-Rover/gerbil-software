@@ -12,5 +12,9 @@
 # on the Jetson 2026-10-14. Note this ID has no per-unit serial number, so a
 # second RoboClaw on USB would also match.
 SUBSYSTEM=="tty", ENV{ID_SERIAL}=="Basicmicro_Inc._USB_Roboclaw_2x60A", SYMLINK+="gerbil_roboclaw", GROUP="dialout", MODE="0660"
-SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_LIDAR", SYMLINK+="gerbil_lidar", GROUP="dialout", MODE="0660"
+# LD19 LIDAR on a Silicon Labs CP2102 adapter, confirmed on the Jetson
+# 2026-11-03. ID_SERIAL_SHORT is 0001, the CP2102 factory default, so ANY
+# CP2102 adapter will also match this rule -- if the GPS turns out to use one,
+# match on KERNELS (USB port path) instead to tell them apart.
+SUBSYSTEM=="tty", ENV{ID_SERIAL}=="Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001", SYMLINK+="gerbil_lidar", GROUP="dialout", MODE="0660"
 SUBSYSTEM=="tty", ENV{ID_SERIAL}=="REPLACE_ME_GPS", SYMLINK+="gerbil_gps", GROUP="dialout", MODE="0660"
