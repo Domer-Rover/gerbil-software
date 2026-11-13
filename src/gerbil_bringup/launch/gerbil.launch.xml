@@ -14,6 +14,7 @@
     <arg name="launch_gps" default="false" />
     <arg name="launch_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
     <arg name="launch_zed" default="true" />
+    <arg name="launch_imu" default="false" description="BNO055 on I2C; publishes /imu/data, not fused by the EKF" />
 
     <!-- ==================== PATHS ==================== -->
     <let name="urdf_path"
@@ -94,6 +95,11 @@
             <param name="publish.nav.status" value="true" />
             <param name="publish.nav.pvt" value="true" />
         </node>
+    </group>
+
+    <!-- ==================== IMU (BNO055) ==================== -->
+    <group if="$(var launch_imu)">
+        <include file="$(find-pkg-share imu_package)/launch/bno055_imu.launch.py" />
     </group>
 
     <!-- ==================== EKF (odom -> base_footprint) ==================== -->

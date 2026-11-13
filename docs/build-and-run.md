@@ -118,6 +118,30 @@ tmux ls                    # list sessions
 
 If tmux is missing: `sudo apt install tmux` (admin).
 
+## Mission launcher (GUI)
+
+[tools/mission_launcher](../tools/mission_launcher/README.md) does the tmux
+steps above from the base-station laptop. It has one Start button per URC
+mission, plus live logs, sensor health lights, and a STOP ALL button.
+
+Each mission is a launch file with its sensors fixed:
+
+| Launch file | Base | Adds |
+| --- | --- | --- |
+| `mission_astrobiology.launch.py` | `gerbil_foxglove` | ZED, GPS |
+| `mission_delivery.launch.py` | `gerbil_foxglove` | ZED, GPS, optional ArUco (`launch_aruco`) |
+| `mission_equipment_servicing.launch.py` | `gerbil_foxglove` | ZED |
+| `mission_autonomy.launch.py` | `gerbil_nav2` | LIDAR, ZED, GPS, ArUco, velocity PID |
+
+They also run by hand, e.g.
+`ros2 launch gerbil_bringup mission_delivery.launch.py use_mock_hardware:=true`.
+Every launch file also takes `launch_imu:=true`, which starts the BNO055.
+It publishes `/imu/data` but isn't fused by the EKF.
+
+No mission starts teleop. To drive, run `ros2 run gerbil_bringup
+teleop_joystick.sh` (or `teleop_keyboard.sh`) in a second terminal on the
+rover; twist_mux ranks the joystick above the keyboard and Nav2.
+
 ## Checklist before driving
 
 1. `ls -l /dev/gerbil_*` — udev names exist

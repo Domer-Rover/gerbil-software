@@ -1,0 +1,70 @@
+# Mission registry for the mission launcher GUI (tools/mission_launcher).
+#
+# This is the only robot-specific file the GUI reads; Capybara keeps its own
+# copy with its own launch files. Per mission:
+#   args:    launch args shown as toggles in the GUI, with their defaults.
+#            Everything else is fixed inside the mission launch file.
+#   network: required = teleop/video mission, the GUI warns on a slow or lost
+#            link; tolerant = the rover must keep going without the link.
+#   checks:  topic -> sensor label, each lit green once a message arrives.
+robot: gerbil
+package: gerbil_bringup
+
+missions:
+  - id: astrobiology
+    title: Astrobiology
+    description: Teleop to a site, image it, tag its GPS coordinates
+    launch: mission_astrobiology.launch.py
+    args:
+      use_mock_hardware: false
+      launch_imu: false
+    network: required
+    checks:
+      /joint_states: Encoders
+      /zed/zed_node/rgb/color/rect/image/compressed: Camera
+      /fix: GNSS
+      /odometry/filtered: EKF
+
+  - id: delivery
+    title: Delivery
+    description: Long-range teleop to astronauts across rough terrain
+    launch: mission_delivery.launch.py
+    args:
+      use_mock_hardware: false
+      launch_imu: false
+      launch_aruco: false
+    network: required
+    checks:
+      /joint_states: Encoders
+      /zed/zed_node/rgb/color/rect/image/compressed: Camera
+      /fix: GNSS
+      /odometry/filtered: EKF
+
+  - id: equipment_servicing
+    title: Equipment Servicing
+    description: Fine teleop at the mock lander
+    launch: mission_equipment_servicing.launch.py
+    args:
+      use_mock_hardware: false
+      launch_imu: false
+    network: required
+    checks:
+      /joint_states: Encoders
+      /zed/zed_node/rgb/color/rect/image/compressed: Camera
+      /odometry/filtered: EKF
+
+  - id: autonomy
+    title: Autonomy
+    description: Nav2 + ArUco (joystick override via teleop_joystick.sh)
+    launch: mission_autonomy.launch.py
+    args:
+      use_mock_hardware: false
+      launch_imu: false
+    network: tolerant
+    checks:
+      /joint_states: Encoders
+      /zed/zed_node/rgb/color/rect/image/compressed: Camera
+      /scan: Lidar
+      /fix: GNSS
+      /odometry/filtered: EKF
+      /aruco/markers: ArUco

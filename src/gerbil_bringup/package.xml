@@ -26,6 +26,8 @@
   <exec_depend>laser_filters</exec_depend>
   <exec_depend>ldlidar_stl_ros2</exec_depend>
   <exec_depend>ublox_gps</exec_depend>
+  <!-- launch_imu:=true includes imu_package/launch/bno055_imu.launch.py -->
+  <exec_depend>imu_package</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <!-- Nav2 nodes launched by gerbil_nav2.launch.py -->
   <exec_depend>nav2_controller</exec_depend>
@@ -36,7 +38,7 @@
   <!-- Nav2 plugins selected in config/nav2_params.yaml -->
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
   <exec_depend>nav2_smac_planner</exec_depend>
-  <!-- scripts/aruco_detector.py (not in any launch file) -->
+  <!-- scripts/aruco_detector.py (mission_autonomy, mission_delivery launch_aruco) -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>

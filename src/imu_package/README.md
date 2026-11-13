@@ -4,21 +4,16 @@ ROS2 package for the Bosch BNO055 9-DOF IMU sensor on Jetson.
 
 ## Features
 - Publishes sensor_msgs/Imu messages
-- Supports both I2C (Adafruit library) and Serial connection
+- Connects over I2C (Adafruit CircuitPython library); there is no serial mode
 - Configurable publish rate
 - Includes test subscriber for verification
 - Launch files and parameter configuration
 
 ## Dependencies
 
-Install the Adafruit BNO055 library (optional, for I2C):
+Install the Adafruit BNO055 and extended-bus libraries:
 ```bash
-pip3 install adafruit-circuitpython-bno055
-```
-
-Install pyserial (for serial connection):
-```bash
-pip3 install pyserial
+pip3 install adafruit-circuitpython-bno055 adafruit-extended-bus
 ```
 
 ## Building
@@ -36,10 +31,8 @@ source install/setup.bash
 ros2 launch imu_package bno055_imu.launch.py
 ```
 
-Or with custom serial port:
-```bash
-ros2 launch imu_package bno055_imu.launch.py serial_port:=/dev/ttyUSB0
-```
+Or as part of the robot bringup: `launch_imu:=true` on any `gerbil_bringup`
+launch file.
 
 ### Run the test subscriber:
 ```bash
@@ -56,11 +49,10 @@ ros2 topic hz /imu/data
 ## Configuration
 
 Edit `config/bno055_params.yaml` to configure:
-- Serial port
-- Baud rate
+- I2C bus (`i2c_bus`, default 7, i.e. `/dev/i2c-7`)
+- I2C address (`i2c_address`, default 0x28)
 - Publishing rate
 - Frame ID
-- I2C vs Serial mode
 
 ## Topics
 
@@ -76,20 +68,16 @@ sudo apt install ros-humble-robot-localization
 
 The BNO055 has a built-in sensor fusion algorithm that provides orientation quaternions directly, but you can also use ROS2's `robot_localization` for additional filtering or fusing with other sensors like wheel odometry.
 
+Gerbil's EKF does not fuse it yet: the node fills only the first covariance
+entry (see `gerbil_bringup/config/ekf.yaml`).
+
 ## Troubleshooting
 
-### Finding the IMU serial port:
+### Find the IMU on the I2C bus:
 ```bash
-ls -l /dev/ttyACM*
-ls -l /dev/ttyUSB*
+sudo i2cdetect -y -r 7      # expect 28 (or 29 if ADR is pulled high)
 ```
 
-### Check IMU connection:
-```bash
-sudo dmesg | grep tty
-```
-
-### Give permission to serial port:
-```bash
-sudo chmod 666 /dev/ttyACM1
-```
+### Permission to the I2C bus:
+The user must be in the `i2c` group (`id -nG`); `scripts/add_dev_user.sh`
+adds it.

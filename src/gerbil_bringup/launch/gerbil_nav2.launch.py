@@ -39,6 +39,12 @@ def generate_launch_description():
         description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 
+    launch_imu_arg = DeclareLaunchArgument(
+        'launch_imu',
+        default_value='false',
+        description='Launch the BNO055 IMU (not fused by the EKF)'
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -65,6 +71,7 @@ def generate_launch_description():
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_lidar': 'true',
             'launch_gps': LaunchConfiguration('launch_gps'),
+            'launch_imu': LaunchConfiguration('launch_imu'),
         }.items()
     )
 
@@ -147,6 +154,7 @@ def generate_launch_description():
         use_mock_hardware_arg,
         use_duty_cycle_arg,
         launch_gps_arg,
+        launch_imu_arg,
         foxglove_port_arg,
         # Robot base (controllers + ZED + LIDAR)
         capybara_launch,

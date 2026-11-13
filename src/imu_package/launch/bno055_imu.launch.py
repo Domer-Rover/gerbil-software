@@ -1,4 +1,7 @@
 # launch/bno055_imu.launch.py
+#
+# The BNO055 is on I2C (bus and address in config/bno055_params.yaml); the
+# node opens no serial port.
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -16,12 +19,6 @@ def generate_launch_description():
     config_file = os.path.join(pkg_dir, 'config', 'bno055_params.yaml')
 
     # Declare launch arguments
-    serial_port_arg = DeclareLaunchArgument(
-        'serial_port',
-        default_value='/dev/ttyACM1',
-        description='Serial port for BNO055 IMU'
-    )
-
     publish_rate_arg = DeclareLaunchArgument(
         'publish_rate',
         default_value='50.0',
@@ -35,7 +32,6 @@ def generate_launch_description():
         name='bno055_imu_node',
         output='screen',
         parameters=[config_file, {
-            'serial_port': LaunchConfiguration('serial_port'),
             'publish_rate': LaunchConfiguration('publish_rate'),
         }],
         remappings=[
@@ -44,7 +40,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        serial_port_arg,
         publish_rate_arg,
         imu_node
     ])
