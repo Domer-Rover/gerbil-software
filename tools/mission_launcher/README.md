@@ -74,9 +74,13 @@ Terminal         ──ssh──▶ teleop_keyboard.sh / teleop_joystick.sh ─�
 
    ```bash
    ssh gerbil
+   source ~/domerrover/gerbil-software/install/setup.bash   # once per terminal
    ros2 run gerbil_bringup teleop_keyboard.sh     # or teleop_joystick.sh
    SPEED=0.15 ros2 run gerbil_bringup teleop_keyboard.sh   # slower, indoors
    ```
+
+   Without the `source`, `ros2 run` reports `Package 'gerbil_bringup' not
+   found`: a fresh SSH shell has ROS but not this workspace.
 
    Keep the keyboard window focused. Letting go stops the wheels within about
    a second (twist_mux and the controller each time out after 0.5 s). In
