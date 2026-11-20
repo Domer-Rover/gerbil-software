@@ -89,7 +89,15 @@ controller_server:
 
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.2
+      # MUST be >= the planner's own tolerance (0.5 under SmacPlanner2D below)
+      # or goals become unreachable: the planner may return a path whose last
+      # pose is 0.5 m from the request, the controller drives to the end of
+      # that path, and this checker then refuses to call it arrived. The robot
+      # parks short and spins into recovery with nothing in the logs naming
+      # the cause. Widening the checker is the right side to fix, since a
+      # tighter planner tolerance just turns this into a planning failure and
+      # goal precision does not matter for this rover.
+      xy_goal_tolerance: 0.5
       yaw_goal_tolerance: 0.3
       path_length_tolerance: 1.0
       stateful: True
@@ -127,11 +135,13 @@ controller_server:
       # How far along the path to sample for the heading to rotate toward.
       # Too small and it chases noise in the first path segment.
       forward_sampling_distance: 0.5
-      # Both must match the real limits. angular.z.max_velocity in
-      # gerbil_controllers.yaml is 0.5, so a larger value here is simply
-      # clamped by the controller and makes the shim mispredict its own timing.
+      # Both must match the real limits in gerbil_controllers.yaml, which are
+      # angular.z.max_velocity 0.5 and angular.z.max_acceleration 0.5. A larger
+      # value here is simply clamped by the controller and makes the shim
+      # mispredict its own timing. max_angular_accel was 0.7, which did not
+      # match the 0.5 it claimed to.
       rotate_to_heading_angular_vel: 0.5
-      max_angular_accel: 0.7
+      max_angular_accel: 0.5
       # Collision-check this far ahead while rotating. The footprint is
       # asymmetric with 0.55 m of tail behind the pivot, so rotation sweeps a
       # 0.60 m radius -- this is what stops it rotating into something.
@@ -175,7 +185,13 @@ controller_server:
       curvature_lookahead_dist: 0.25
       use_cost_regulated_linear_velocity_scaling: true  # slows near inflation potential field
       regulated_linear_scaling_min_radius: 0.9
-      regulated_linear_scaling_min_speed: 0.25
+      # MUST be below desired_linear_vel or both regulation features above are
+      # dead. RPP takes the minimum of the curvature- and cost-limited speeds
+      # and then FLOORS it with this value, so at 0.25 the floor equalled the
+      # ceiling and the output was always 0.25 regardless of curvature or
+      # cost. The 0.25 is upstream's default, which assumes desired_linear_vel
+      # 0.5. Matched to min_approach_linear_velocity instead.
+      regulated_linear_scaling_min_speed: 0.1
       # TRUE because this is a differential drive and cannot crab. With it
       # false RPP tries to ARC onto the path, so from a standstill with a large
       # heading error the rover creeps forward on a tight curve instead of
@@ -230,7 +246,19 @@ behavior_server:
     # assisted_teleop is kept but is NOT wired to anything: it expects an
     # operator twist stream, and teleop here goes through twist_mux instead.
     # Harmless, and the default BT never calls it. Drop it if trimming.
-    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait", "assisted_teleop"]
+    # NO "backup". The rover is blind behind -- /scan is cropped to the front
+    # 180 degrees -- and the default BT's recovery branch runs
+    # ClearEntireCostmap before BackUp. So by the time BackUp collision-checks,
+    # every rear obstacle has been erased, rear space is unknown rather than
+    # lethal, and footprint_clearing_enabled has stamped the rover's own 0.62 m
+    # tail as FREE. The check passes and it reverses into terrain it has never
+    # sensed, with no collision monitor as a backstop.
+    #
+    # The BackUp node in the default BT then FAILS rather than being skipped,
+    # so recovery ends one step earlier instead of degrading quietly. That is
+    # the intended trade. Restoring it needs either rear sensing or a custom BT
+    # that does not clear the costmap first.
+    behavior_plugins: ["spin", "drive_on_heading", "wait", "assisted_teleop"]
     spin:
       plugin: "nav2_behaviors/Spin"
     backup:
@@ -252,9 +280,12 @@ behavior_server:
     # before finishing the turn.
     max_rotational_vel: 0.5
     min_rotational_vel: 0.1
-    # 0.7 matches max_angular_accel used by the rotation shim and RPP, so all
-    # three agree on how fast the rover may change yaw rate.
-    rotational_acc_lim: 0.7
+    # 0.5 to match angular.z.max_acceleration in gerbil_controllers.yaml and
+    # max_angular_accel on the rotation shim. Was 0.7 while claiming to match
+    # them, so Spin modelled its own ramp-up 40% faster than the controller
+    # delivers and could time out before finishing a turn -- the same bug as
+    # max_rotational_vel above, in the acceleration term instead of velocity.
+    rotational_acc_lim: 0.5
 
 # Both costmaps use odom frame with rolling windows — no static map needed.
 # Footprint: rectangular bounding box sized for the rear axle (widest point).
@@ -352,7 +383,11 @@ global_costmap:
         # halve the swept radius and make the footprint symmetric again. The
         # software alternative is SmacPlannerLattice, which does full SE2
         # footprint collision checking instead of point-plus-inflation.
-        inflation_radius: 0.65
+        # 0.70 to cover the PADDED circumscribed radius. footprint_padding is
+        # 0.03, so the padded footprint reaches -0.62 and +/-0.27, giving
+        # sqrt(0.62^2 + 0.27^2) = 0.676. The old 0.65 was slightly inside that,
+        # so a pose could be collision-free by inflation and still clip.
+        inflation_radius: 0.70
         cost_scaling_factor: 2.5       # sharper falloff, less pink spread
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's
@@ -438,7 +473,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        inflation_radius: 0.65         # see the global_costmap note above
+        inflation_radius: 0.70         # see the global_costmap note above
         cost_scaling_factor: 2.5
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's

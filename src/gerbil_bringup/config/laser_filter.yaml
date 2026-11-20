@@ -27,8 +27,15 @@ scan_to_scan_filter_chain:
       type: laser_filters/LaserScanBoxFilter
       params:
         box_frame: base_link
-        min_x: -0.33   # chassis is 0.61 long: half is 0.305, plus a small margin
-        max_x:  0.33
+        # Bounds are relative to base_link, which sits at the WHEEL AXLE, not
+        # the geometric centre -- the body runs from -0.5876 to +0.0220 and the
+        # tyres reach +0.0474. These were +/-0.33, symmetric, left over from
+        # when base_link was the chassis middle. That masked 0.33 m AHEAD of a
+        # rover that extends 0.05 m forward, deleting real obstacles inside a
+        # 0.28 m blind annulus in front of the tyres, while leaving the rear
+        # chassis from -0.33 to -0.59 unmasked.
+        min_x: -0.62   # padded footprint tail
+        max_x:  0.08   # just past the tyre leading edge
         min_y: -0.26   # separation 0.44 + tyre 0.032 -> outer faces 0.236, plus margin
         max_y:  0.26
         min_z: -1.0
