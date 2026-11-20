@@ -3,9 +3,23 @@
     # I2C Configuration
     i2c_bus: 7            # Based on your i2cdetect results
     i2c_address: 0x28     # Based on your i2cdetect results
-    
+
     # Publishing rate in Hz
     publish_rate: 50.0
-    
+
     # Frame ID for the IMU
     frame_id: 'imu_link'
+
+    # Measurement variances. robot_localization weights each source by the
+    # inverse of its variance, so these decide how hard the IMU pulls against
+    # wheel odometry. gyro_variance is the one that matters -- yaw rate is what
+    # rejects wheel slip, because a wheel spinning on sand reports a rotation
+    # the gyro does not see. Lower it to trust the gyro more.
+    #
+    # A zero variance is NOT "unknown" to robot_localization; it means
+    # "perfectly certain". Never set one of these to 0.0.
+    gyro_variance: 0.0025            # (rad/s)^2, about 0.05 rad/s = 2.9 deg/s
+    orientation_variance_rp: 0.0003  # rad^2, roll and pitch, about 1 deg
+    orientation_variance_yaw: 0.05   # rad^2, about 13 deg -- magnetometer sits
+                                     # next to the motors and the 12 V run
+    accel_variance: 0.04             # (m/s^2)^2, about 0.2 m/s^2

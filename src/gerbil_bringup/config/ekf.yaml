@@ -63,12 +63,22 @@ ekf_filter_node:
     odom1_relative: false
     odom1_queue_size: 10
 
-    # BNO055 is deliberately not fused yet: bno055_imu_node only fills
-    # covariance[0], and robot_localization reads a zero covariance as
-    # "perfectly certain", which would let the IMU dominate the filter.
-    # Fix the covariances in imu_package first, then add:
-    # imu0: /imu/data
-    # imu0_config: [...yaw rate only...]
+    # NO IMU SOURCE, AND THAT IS DELIBERATE.
+    #
+    # Gerbil runs no external IMU. imu_package/bno055_imu_node exists in the
+    # tree but the chip is not on the robot. The ZED's own IMU is already
+    # fused inside its visual odometry (imu_fusion in zed_override.yaml), so
+    # adding /zed/zed_node/imu/data here would feed the filter one sensor
+    # twice -- correlated measurements that the EKF assumes are independent,
+    # which makes it overconfident rather than better informed.
+    #
+    # The slip question an IMU usually gets reached for, resolved:
+    #   yaw slip     already rejected. ZED vyaw is fused above, so a wheel
+    #                spinning in place that the camera does not see is outvoted
+    #   forward slip NOT rejected, because ZED vx is excluded. An IMU cannot
+    #                fix this -- integrating acceleration for velocity drifts
+    #                uselessly within seconds. The only fix is restoring ZED
+    #                vx, which is the outdoor test noted above.
 
     process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,

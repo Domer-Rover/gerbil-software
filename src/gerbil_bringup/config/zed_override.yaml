@@ -68,8 +68,11 @@
             # NOTE this is also why the ZED IMU must not be fused separately
             # into the robot_localization EKF: it is already inside this
             # odometry, and fusing both would double-count one sensor and make
-            # the filter overconfident. An independent IMU is what the EKF
-            # wants, which is the BNO055 once its covariances are fixed.
+            # the filter overconfident.
+            #
+            # Gerbil has no independent IMU, and does not need one. See the
+            # note in ekf.yaml -- the gap an IMU would be reached for is
+            # FORWARD slip, and an IMU cannot close it.
             imu_fusion: true
 
             # Loop closure against a remembered area. Off deliberately: it can
