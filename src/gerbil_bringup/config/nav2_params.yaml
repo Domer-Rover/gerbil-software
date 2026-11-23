@@ -364,13 +364,17 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
-        # 0.65, just over the CIRCUMSCRIBED radius of 0.6369. That is large,
-        # and deliberately so. Because base_link is at the axle the footprint
-        # is asymmetric, giving an inscribed radius of only 0.07 - and the
-        # costmap only marks cells as definitely-colliding within the
-        # INSCRIBED radius. SmacPlanner2D plans for a point and takes all its
-        # clearance from inflation, so a small value would let it route the
-        # origin 10cm from a wall while 0.55 m of tail swung into it.
+        # Set just over the CIRCUMSCRIBED radius of 0.6369 (see the 0.70
+        # derivation below). That is large, and deliberately so. Because
+        # base_link is at the axle the footprint is asymmetric: it runs from
+        # x=-0.59 to x=+0.05, so the INSCRIBED radius is only 0.05 (0.08 with
+        # footprint_padding). The costmap marks cells as definitely-colliding
+        # (cost 253) only within the inscribed radius, so inflation hard-blocks
+        # barely 5-8 cm here; everything beyond that is a 1-252 gradient that
+        # SmacPlanner2D will happily route through. The planner plans for a
+        # POINT and takes all its clearance from inflation, so a small radius
+        # would let it route the origin 10 cm from an obstacle while 0.59 m of
+        # tail swung into it.
         #
         # This is also physically honest: use_rotate_to_heading is true, so
         # the rover may turn in place anywhere along the path, and turning in
@@ -378,7 +382,9 @@ global_costmap:
         # clear space to turn.
         #
         # CONSEQUENCE: standard 0.8 m doorways are effectively impassable and
-        # the rover wants wide corridors. The real fix is mechanical - moving
+        # the rover wants wide corridors. This matters much less in the open
+        # field, which is the actual test environment - there the cost is only
+        # that goals must sit in genuinely open ground. The real fix is mechanical - moving
         # the drive wheels rearward toward the chassis middle would roughly
         # halve the swept radius and make the footprint symmetric again. The
         # software alternative is SmacPlannerLattice, which does full SE2

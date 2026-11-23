@@ -53,6 +53,25 @@ ekf_filter_node:
     #                   only source of skid and caster-scrub information
     #   vyaw kept     - agrees with the wheels to 0.29%, and averaging two
     #                   independent estimates of it reduces drift
+    # CAUTION - UNRESOLVED: the ZED wrapper never populates twist.covariance
+    # on this topic (verified against the vendored zed_components source: it
+    # sets IMU and pose covariances, but there is no twist.covariance
+    # assignment anywhere). The message therefore arrives all-zero, and
+    # robot_localization replaces a non-positive diagonal entry with 1e-9 --
+    # i.e. it reads "unset" as "perfectly certain". Net effect: the ZED's vy
+    # and vyaw are fused as near-absolute truth and the wheel encoders'
+    # vyaw (variance 0.1 below) contributes essentially nothing.
+    #
+    # That happens to be roughly the weighting we want -- VIO yaw rate beats
+    # wheel-derived yaw on a skid-steer that scrubs through every turn -- but
+    # it is unconditional. If the ZED loses tracking (low-texture grass, sun
+    # into the lens, motion blur on a fast spin) the garbage is still stamped
+    # "certain" and there is no wheel vote to damp it.
+    #
+    # FIX (do before any unattended run): relay node that stamps a sane twist
+    # covariance (vy ~0.02, vyaw ~0.01, so the ZED still wins but not
+    # infinitely) and drops messages when pos_tracking_status is not OK, then
+    # point odom1 at the relayed topic.
     odom1: /zed/zed_node/odom
     odom1_config: [false, false, false,
                    false, false, false,
