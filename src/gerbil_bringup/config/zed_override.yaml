@@ -52,6 +52,13 @@
 
         pos_tracking:
             pos_tracking_enabled: true
+            # GEN_3 is the newest tracking generation and is what we want, but
+            # the vendored common_stereo.yaml is the only place it was set, so
+            # an SDK or wrapper upgrade would silently revert it to the shipped
+            # default with no log line. Pinned here, where our override wins.
+            # Same value as before, so this changes nothing today; it just
+            # stops the setting from disappearing later.
+            pos_tracking_mode: 'GEN_3'
 
             # The EKF in gerbil_bringup owns odom -> base_footprint. Exactly
             # one node may publish a given transform, so both of these must
