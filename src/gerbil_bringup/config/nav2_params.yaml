@@ -258,7 +258,16 @@ behavior_server:
     # so recovery ends one step earlier instead of degrading quietly. That is
     # the intended trade. Restoring it needs either rear sensing or a custom BT
     # that does not clear the costmap first.
-    behavior_plugins: ["spin", "drive_on_heading", "wait", "assisted_teleop"]
+    # Must match the behaviours the LOADED behaviour tree actually calls.
+    # No default_nav_to_pose_bt_xml is set here, so bt_navigator runs Nav2's
+    # shipped navigate_to_pose_w_replanning_and_recovery.xml, and that tree
+    # contains a BackUp node. "backup" was dropped from this list earlier to
+    # stop the rover reversing 0.59 m of blind tail into a just-cleared
+    # costmap. That concern is real, but removing the PLUGIN does not stop the
+    # tree asking for /backup, it only guarantees that recovery step fails with
+    # no action server. The only correct way to remove BackUp is to edit the
+    # tree. Restored so the plugin list matches the tree.
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait", "assisted_teleop"]
     spin:
       plugin: "nav2_behaviors/Spin"
     backup:
