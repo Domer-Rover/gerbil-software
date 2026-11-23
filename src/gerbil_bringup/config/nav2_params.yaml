@@ -394,7 +394,19 @@ global_costmap:
         # sqrt(0.62^2 + 0.27^2) = 0.676. The old 0.65 was slightly inside that,
         # so a pose could be collision-free by inflation and still clip.
         inflation_radius: 0.70
-        cost_scaling_factor: 2.5       # sharper falloff, less pink spread
+        # 1.5, LOWERED from 2.5. This is the main lever for how wide a berth
+        # the planner gives an obstacle, and it matters more here than on a
+        # normal robot. Because base_link is at the axle the inscribed radius
+        # is only 0.05, so inflation hard-blocks (cost 253) barely 5-8 cm;
+        # everything from there out to inflation_radius is a 1-252 gradient,
+        # and SmacPlanner2D -- which plans for a POINT -- will route through a
+        # gradient if it shortens the path. The decay is exp(-factor * dist),
+        # so 2.5 made cells cheap again within ~25 cm and the planner would
+        # cut close. At 1.5 the cells stay genuinely expensive across the full
+        # 0.70 m, which is the only thing keeping the 0.59 m tail clear.
+        # Raise it back toward 2.5 only if paths start bending around
+        # obstacles so widely that the rover will not commit to a gap.
+        cost_scaling_factor: 1.5
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's
         # allow_unknown: true. There is no map, so a rolling costmap in the
@@ -480,7 +492,7 @@ local_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         enabled: true
         inflation_radius: 0.70         # see the global_costmap note above
-        cost_scaling_factor: 2.5
+        cost_scaling_factor: 1.5       # see the global_costmap note above
         inflate_unknown: false
         # FALSE. This was true, which directly contradicted the planner's
         # allow_unknown: true. There is no map, so a rolling costmap in the
