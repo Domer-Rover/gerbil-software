@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Joystick teleop for Gerbil, in its own terminal.
 #
-# Normally you do NOT need this: gerbil.launch.xml already starts joy_node and
-# teleop_twist_joy when launched with use_joystick:=true. Use this script to
-# attach a controller to an ALREADY-RUNNING robot without restarting the stack,
-# or to test a pad on its own.
+# This IS how you drive Gerbil with a pad. gerbil.launch.xml deliberately does
+# not start joy_node or teleop_twist_joy, and has no use_joystick argument --
+# that one is on Capybara. Teleop lives outside the launch file because a pad
+# gets plugged in and unplugged independently of the robot stack, so attaching
+# one should not mean restarting everything.
 #
 #   ./teleop_joystick.sh               # /dev/input/js0
 #   JOY_DEV=/dev/input/js1 ./teleop_joystick.sh
@@ -26,10 +27,10 @@ if [ ! -e "$JOY_DEV" ]; then
 fi
 
 if ros2 node list 2>/dev/null | grep -q teleop_twist_joy; then
-    echo "ERROR: teleop_twist_joy is already running (launched with" >&2
-    echo "       use_joystick:=true). Two instances would both publish to" >&2
-    echo "       /cmd_vel_joy and fight. Relaunch with use_joystick:=false," >&2
-    echo "       or just use the one already running." >&2
+    echo "ERROR: teleop_twist_joy is already running, probably this script" >&2
+    echo "       in another terminal. Two instances would both publish to" >&2
+    echo "       /cmd_vel_joy and fight. Use the one already running, or" >&2
+    echo "       stop it first." >&2
     exit 1
 fi
 check_mux "joystick commands"

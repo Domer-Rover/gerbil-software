@@ -60,7 +60,7 @@
             - '/gps/.*'
             - '/ublox.*'
 
-            # ── Joystick teleop (use_joystick:=true) ───────────────────────
+            # ── Joystick teleop (teleop_joystick.sh) ───────────────────────
             - '/joy'
 
             # ── Nav2 — goals, plans, costmaps, footprints, status ──────────
