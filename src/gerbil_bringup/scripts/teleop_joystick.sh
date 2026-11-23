@@ -30,10 +30,10 @@ if [ ! -e "$JOY_DEV" ]; then
 fi
 
 if ros2 node list 2>/dev/null | grep -q teleop_twist_joy; then
-    echo "ERROR: teleop_twist_joy is already running, probably this script" >&2
-    echo "       in another terminal. Two instances would both publish to" >&2
-    echo "       /cmd_vel_joy and fight. Use the one already running, or" >&2
-    echo "       stop it first." >&2
+    echo "ERROR: teleop_twist_joy is already running, either this script in" >&2
+    echo "       another terminal or the stack launched with use_joystick:=true." >&2
+    echo "       Two instances would both publish to /cmd_vel_joy and fight." >&2
+    echo "       Use the one already running, or stop it first." >&2
     exit 1
 fi
 check_mux "joystick commands"
