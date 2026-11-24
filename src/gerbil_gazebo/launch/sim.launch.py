@@ -33,6 +33,7 @@ Startup order:
      Nav2's costmaps (which wait for that transform) come up.
 """
 
+import math
 import os
 
 import yaml
@@ -293,12 +294,17 @@ def _launch_setup(context, *args, **kwargs):
     actions.append(RegisterEventHandler(
         OnProcessExit(target_action=create, on_exit=_after_create)))
 
+    # spawn_obstacle.sh takes WORLD coordinates, so "5 m ahead" has to be
+    # computed from the spawn pose rather than hard-coded as (5, 0).
+    ahead_x = spawn['x'] + 5.0 * math.cos(spawn['yaw'])
+    ahead_y = spawn['y'] + 5.0 * math.sin(spawn['yaw'])
     actions.append(LogInfo(msg=(
         '\n[gerbil sim] Ready once "Configured and activated diff_drive_controller" appears.\n'
         '  Send a 3 m goal (or use the RViz "2D Goal Pose" tool, frame odom):\n'
         '    ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped '
         '"{header: {frame_id: odom}, pose: {position: {x: 3.0}, orientation: {w: 1.0}}}"\n'
-        '  Drop an obstacle 5 m ahead:  ros2 run gerbil_gazebo spawn_obstacle.sh box 5 0\n'
+        f'  Drop an obstacle 5 m ahead:  ros2 run gerbil_gazebo spawn_obstacle.sh box '
+        f'{ahead_x:.2f} {ahead_y:.2f}   (world coordinates)\n'
         '  Odometry vs truth:           the odom_error lines (odom_error:=false to silence)\n'
         '  Drive by keyboard:           ros2 run gerbil_bringup teleop_keyboard.sh'
     )))
