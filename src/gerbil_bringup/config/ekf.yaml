@@ -53,6 +53,25 @@ ekf_filter_node:
     #                   only source of skid and caster-scrub information
     #   vyaw kept     - agrees with the wheels to 0.29%, and averaging two
     #                   independent estimates of it reduces drift
+    # CAUTION - UNRESOLVED: the ZED wrapper never populates twist.covariance
+    # on this topic (verified against the vendored zed_components source: it
+    # sets IMU and pose covariances, but there is no twist.covariance
+    # assignment anywhere). The message therefore arrives all-zero, and
+    # robot_localization replaces a non-positive diagonal entry with 1e-9 --
+    # i.e. it reads "unset" as "perfectly certain". Net effect: the ZED's vy
+    # and vyaw are fused as near-absolute truth and the wheel encoders'
+    # vyaw (variance 0.1 below) contributes essentially nothing.
+    #
+    # That happens to be roughly the weighting we want -- VIO yaw rate beats
+    # wheel-derived yaw on a skid-steer that scrubs through every turn -- but
+    # it is unconditional. If the ZED loses tracking (low-texture grass, sun
+    # into the lens, motion blur on a fast spin) the garbage is still stamped
+    # "certain" and there is no wheel vote to damp it.
+    #
+    # FIX (do before any unattended run): relay node that stamps a sane twist
+    # covariance (vy ~0.02, vyaw ~0.01, so the ZED still wins but not
+    # infinitely) and drops messages when pos_tracking_status is not OK, then
+    # point odom1 at the relayed topic.
     odom1: /zed/zed_node/odom
     odom1_config: [false, false, false,
                    false, false, false,
@@ -63,12 +82,22 @@ ekf_filter_node:
     odom1_relative: false
     odom1_queue_size: 10
 
-    # BNO055 is deliberately not fused yet: bno055_imu_node only fills
-    # covariance[0], and robot_localization reads a zero covariance as
-    # "perfectly certain", which would let the IMU dominate the filter.
-    # Fix the covariances in imu_package first, then add:
-    # imu0: /imu/data
-    # imu0_config: [...yaw rate only...]
+    # NO IMU SOURCE, AND THAT IS DELIBERATE.
+    #
+    # Gerbil runs no external IMU. imu_package/bno055_imu_node exists in the
+    # tree but the chip is not on the robot. The ZED's own IMU is already
+    # fused inside its visual odometry (imu_fusion in zed_override.yaml), so
+    # adding /zed/zed_node/imu/data here would feed the filter one sensor
+    # twice -- correlated measurements that the EKF assumes are independent,
+    # which makes it overconfident rather than better informed.
+    #
+    # The slip question an IMU usually gets reached for, resolved:
+    #   yaw slip     already rejected. ZED vyaw is fused above, so a wheel
+    #                spinning in place that the camera does not see is outvoted
+    #   forward slip NOT rejected, because ZED vx is excluded. An IMU cannot
+    #                fix this -- integrating acceleration for velocity drifts
+    #                uselessly within seconds. The only fix is restoring ZED
+    #                vx, which is the outdoor test noted above.
 
     process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
                                0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,

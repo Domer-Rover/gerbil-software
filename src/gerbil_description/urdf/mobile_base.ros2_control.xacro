@@ -3,9 +3,12 @@
 
     <!-- Hardware mode - mock for simulation, real for actual RoboClaw -->
     <xacro:arg name="use_mock_hardware" default="true" />
-    <!-- Duty cycle (open loop) until the encoders are verified and the RoboClaw
-         velocity PID is tuned in Motion Studio. Then launch with
-         use_duty_cycle:=false to run closed loop. -->
+    <!-- Duty cycle = open-loop MOTOR COMMAND. The encoders are verified and
+         the velocity PID is tuned and saved to NVM, so use_duty_cycle:=false
+         (on-board velocity PID) is available and is what a serious Nav2 run
+         should use. The default stays true because it has no surprising
+         behaviour. Either way the encoders are still read, so wheel odometry
+         is real in both modes. Duty cycle does not mean open-loop odometry. -->
     <xacro:arg name="use_duty_cycle" default="true" />
     <xacro:arg name="serial_port" default="/dev/gerbil_roboclaw" />
 

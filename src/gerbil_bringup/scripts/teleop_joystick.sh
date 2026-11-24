@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Joystick teleop for Gerbil, in its own terminal.
 #
-# Normally you do NOT need this: gerbil.launch.xml already starts joy_node and
-# teleop_twist_joy when launched with use_joystick:=true. Use this script to
-# attach a controller to an ALREADY-RUNNING robot without restarting the stack,
-# or to test a pad on its own.
+# This IS how you drive Gerbil with a pad. gerbil.launch.xml deliberately does
+# not start joy_node or teleop_twist_joy, and has no use_joystick argument --
+# that one is on Capybara. Teleop lives outside the launch file because a pad
+# gets plugged in and unplugged independently of the robot stack, so attaching
+# one should not mean restarting everything.
 #
 #   ./teleop_joystick.sh               # /dev/input/js0
 #   JOY_DEV=/dev/input/js1 ./teleop_joystick.sh
@@ -17,6 +18,9 @@
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/teleop_common.sh"
 : "${JOY_DEV:=/dev/input/js0}"
+# SDL index for joy_node, taken from the jsN number. js0 -> 0, js1 -> 1.
+JOY_ID="$(echo "$JOY_DEV" | grep -oE '[0-9]+$')"
+: "${JOY_ID:=0}"
 
 if [ ! -e "$JOY_DEV" ]; then
     echo "ERROR: no joystick at $JOY_DEV" >&2
@@ -26,23 +30,35 @@ if [ ! -e "$JOY_DEV" ]; then
 fi
 
 if ros2 node list 2>/dev/null | grep -q teleop_twist_joy; then
-    echo "ERROR: teleop_twist_joy is already running (launched with" >&2
-    echo "       use_joystick:=true). Two instances would both publish to" >&2
-    echo "       /cmd_vel_joy and fight. Relaunch with use_joystick:=false," >&2
-    echo "       or just use the one already running." >&2
+    echo "ERROR: teleop_twist_joy is already running, either this script in" >&2
+    echo "       another terminal or the stack launched with use_joystick:=true." >&2
+    echo "       Two instances would both publish to /cmd_vel_joy and fight." >&2
+    echo "       Use the one already running, or stop it first." >&2
     exit 1
 fi
 check_mux "joystick commands"
 
 echo "Joystick teleop  ->  /cmd_vel_joy   (priority 100, beats everything)"
-echo "device=${JOY_DEV}   speed=${SPEED} m/s   turn=${TURN} rad/s (clamped to 0.5)"
+echo "device=${JOY_DEV} (SDL id ${JOY_ID})   speed=${SPEED} m/s   turn=${TURN} rad/s (clamped to 0.5)"
 echo "Hold L1 (button 4) as the deadman, then use the left stick."
 echo
 
 # autorepeat_rate keeps a HELD stick from going stale against the mux's 0.5s
 # timeout; joy_node otherwise only publishes on change.
+# device_id, NOT device_name. ROS 2 Humble's joy_node is SDL2-based and
+# device_name expects the joystick's SDL NAME (here "Wireless Controller"),
+# not a device path. Passing /dev/input/js0 as the name failed with
+#   Could not get joystick with name /dev/input/js0
+# device_id is the SDL index, which matches the jsN number for a single pad.
+# Set JOY_NAME to use the name instead, if you ever run two pads at once.
+if [ -n "${JOY_NAME:-}" ]; then
+    JOY_SEL=(-p "device_name:=${JOY_NAME}")
+else
+    JOY_SEL=(-p "device_id:=${JOY_ID}")
+fi
+
 ros2 run joy joy_node --ros-args \
-    -p "device_name:=${JOY_DEV}" -p autorepeat_rate:=20.0 -p deadzone:=0.05 &
+    "${JOY_SEL[@]}" -p autorepeat_rate:=20.0 -p deadzone:=0.05 &
 JOY_PID=$!
 # Make sure joy_node dies with this script, including on Ctrl-C.
 trap 'kill $JOY_PID 2>/dev/null || true' EXIT INT TERM

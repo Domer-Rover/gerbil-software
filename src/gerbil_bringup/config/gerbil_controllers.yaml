@@ -46,7 +46,12 @@ diff_drive_controller:
     
     # open_loop: true means odometry is calculated from commanded velocities
     # (not encoder feedback) - good for no/unreliable encoders
-    open_loop: false   # odometry from encoder positions (requires use_duty_cycle:=false)
+    # Odometry is integrated from the encoder POSITION state interface.
+    # This does NOT require use_duty_cycle:=false. The hardware interface's
+    # read() polls the encoders unconditionally; use_duty_cycle gates only the
+    # WRITE path (duty command vs. on-board velocity PID). So duty-cycle mode
+    # still gives real encoder odometry, which is what Nav2 and the EKF use.
+    open_loop: false
     enable_odom_tf: false  # the EKF publishes odom -> base_footprint
     
     # Covariance for odometry (higher = less certain)

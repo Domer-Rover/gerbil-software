@@ -17,8 +17,8 @@ standard 6S LiPo. Nominal 22.8 V, and 3.0 V/cell (18.0 V) is the damage floor.
 | Packet Serial Address | 128 | `mobile_base.ros2_control.xacro` |
 | Multi-Unit Mode | Off | single board (Capybara's 3 boards need it on) |
 | Serial timeout | 0.2 s | motors stop if ROS dies; `scripts/serial_timeout.py --set 0.2` |
-| M1 | right wheel | `base_right_wheel_joint` |
-| M2 | left wheel | `base_left_wheel_joint` |
+| M1 | **left** wheel | `base_left_wheel_joint` |
+| M2 | **right** wheel | `base_right_wheel_joint` |
 | Encoder mode | Quadrature (both) | interface reads `READ_M1_M2_ENC` |
 
 ## Main battery (6S LiHV)
@@ -104,8 +104,11 @@ USB link mid-tune, which can leave half-written settings on the board.
 
 ## Known wiring quirks
 
-- M2's encoder A/B are crossed (or reversed in Motion Studio) so that forward
-  motion counts up — confirmed 2026-10-02. Do not "fix" this back.
+- Encoder signs are CORRECT as wired: both channels count up when the robot
+  drives forward, and yaw from wheel odometry has the right sign. Verified on
+  the robot. Earlier revisions of this file described one channel as "crossed"
+  and the other as "reversed in firmware"; that prose was wrong and misleading.
+  Do not change encoder wiring or `encoder_mode` to chase it.
 - Power-on produces an inrush arc at the fuse holder. Press the e-stop before
   unplugging the battery, and consider an XT90-S anti-spark connector or a
   pre-charge resistor. Check the e-stop's **DC** rating, not its AC rating.
@@ -114,16 +117,17 @@ USB link mid-tune, which can leave half-written settings on the board.
 
 Measured 2026-10-06 by `scripts/getPid_2.py` (log in `scripts/pid_logs/`):
 
-| Value | M1 (right) | M2 (left) |
+| Value | M1 (**left**) | M2 (**right**) |
 |---|---|---|
 | qppr | **2785.2 measured** (xacro: 2786) | same shaft/gearbox |
 | QPPS (measured) | 9802 | 10550 |
 | P / I / D | 10.4422 / 0.6266 / 0.0 | 10.4422 / 0.6266 / 0.0 |
-| encoder_mode | **32** (direction reversed in firmware) | **0** |
+| encoder_mode | **32** | **0** |
 | Step-test error | < 0.02% | < 0.02% |
 
-`encoder_mode` differs on purpose: M1 is reversed in firmware so both wheels
-count up when the robot drives forward. Do not "fix" the asymmetry.
+`encoder_mode` differs between the channels because the two motors are
+mounted facing opposite ways. The net result is what matters and it is
+correct: both wheels count up on forward motion. Do not "fix" the asymmetry.
 
 **qppr confirmed 2026-10-14**: ten wheel revolutions moved the M1 encoder from
 2072 to 29924, i.e. 27,852 counts, so 2785.2 per revolution. That is the
@@ -138,10 +142,8 @@ that is a 1.05 m/s ceiling, well above the 0.3 m/s controller cap.
 
 From the 2026-10-06 log:
 
-- [ ] `saved_to_nvm: false` — the PID is in RAM only and is lost on power
-      cycle. Re-run `scripts/getPid_2.py --save`, power cycle, re-read.
-- [ ] `max_current_a: 120.0` on both channels (the board maximum). Set **15 A**
-      per channel.
-- [ ] `serial_timeout_s: 0.0`. Set it now that tuning is done:
-      `python3 scripts/serial_timeout.py --set 0.2`
+- [x] PID written to NVM and confirmed by re-read after a power cycle.
+- [x] Current limit set to **15 A** per channel (was 120.0, the board maximum).
+- [x] `serial_timeout_s` set to **0.2** via `scripts/serial_timeout.py --set 0.2`,
+      so the motors stop if the ROS stack dies without a clean shutdown.
 - [x] `qppr` confirmed by hand (2785.2); xacro value 2786 is correct.

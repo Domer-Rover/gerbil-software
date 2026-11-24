@@ -39,6 +39,18 @@ def generate_launch_description():
         description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 
+    use_joystick_arg = DeclareLaunchArgument(
+        'use_joystick',
+        default_value='false',
+        description=(
+            'Bring the pad up with the stack. It publishes to /cmd_vel_joy, '
+            'which twist_mux takes at priority 100, so holding L1 and moving '
+            'the left stick overrides Nav2 immediately. Note this PAUSES the '
+            'mission rather than cancelling it: the goal stays active and Nav2 '
+            'resumes about 0.5 s after you let go.'
+        )
+    )
+
     foxglove_port_arg = DeclareLaunchArgument(
         'foxglove_port',
         default_value='8765',
@@ -65,6 +77,7 @@ def generate_launch_description():
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
             'launch_lidar': 'true',
             'launch_gps': LaunchConfiguration('launch_gps'),
+            'use_joystick': LaunchConfiguration('use_joystick'),
         }.items()
     )
 
@@ -147,6 +160,7 @@ def generate_launch_description():
         use_mock_hardware_arg,
         use_duty_cycle_arg,
         launch_gps_arg,
+        use_joystick_arg,
         foxglove_port_arg,
         # Robot base (controllers + ZED + LIDAR)
         capybara_launch,

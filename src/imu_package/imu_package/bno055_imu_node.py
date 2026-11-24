@@ -21,11 +21,24 @@ class BNO055IMUNode(Node):
         self.declare_parameter('publish_rate', 50.0)
         self.declare_parameter('frame_id', 'imu_link')
 
+        # Measurement variances, in (rad/s)^2 and rad^2. These are the tuning
+        # knob for how hard the IMU pulls against wheel odometry: the EKF
+        # weights each source by the inverse of its variance, so lowering
+        # gyro_variance makes the gyro win more arguments about yaw rate.
+        self.declare_parameter('gyro_variance', 0.0025)            # 0.05 rad/s
+        self.declare_parameter('orientation_variance_rp', 0.0003)  # ~1 deg
+        self.declare_parameter('orientation_variance_yaw', 0.05)   # ~13 deg
+        self.declare_parameter('accel_variance', 0.04)             # 0.2 m/s^2
+
         # Get parameters
         self.i2c_bus_id = self.get_parameter('i2c_bus').value
         self.i2c_addr = self.get_parameter('i2c_address').value
         self.publish_rate = self.get_parameter('publish_rate').value
         self.frame_id = self.get_parameter('frame_id').value
+        self.gyro_variance = self.get_parameter('gyro_variance').value
+        self.orientation_variance_rp = self.get_parameter('orientation_variance_rp').value
+        self.orientation_variance_yaw = self.get_parameter('orientation_variance_yaw').value
+        self.accel_variance = self.get_parameter('accel_variance').value
 
         # Create publisher
         self.publisher_ = self.create_publisher(Imu, '/imu/data', 10)
@@ -79,31 +92,55 @@ class BNO055IMUNode(Node):
             # --- QUATERNION FIX ---
             # Adafruit library returns (w, x, y, z)
             # ROS message expects x, y, z, w
+            # Covariances are 3x3 row-major, so the diagonal is 0, 4, 8.
+            # A zero entry does NOT mean unknown -- robot_localization reads it
+            # as "perfectly certain" and lets that axis dominate the filter.
+            # Every axis we publish must carry a real variance, and any axis we
+            # cannot read must be marked -1.0 (the ROS "unavailable" convention)
+            # rather than left at zero with a zero value.
+
             quaternion = self.imu.quaternion
-            if quaternion is not None:
-                msg.orientation.w = quaternion[0]   # W is index 0 in Adafruit
-                msg.orientation.x = quaternion[1]
-                msg.orientation.y = quaternion[2]
-                msg.orientation.z = quaternion[3]
-                msg.orientation_covariance[0] = 0.01
-            else:
-                return  # Skip publishing if data is bad
+            if quaternion is None or None in quaternion:
+                return  # a bad fusion frame is not worth publishing
+            msg.orientation.w = quaternion[0]   # W is index 0 in Adafruit
+            msg.orientation.x = quaternion[1]
+            msg.orientation.y = quaternion[2]
+            msg.orientation.z = quaternion[3]
+            # Roll and pitch are gravity-referenced and good to about a degree.
+            # Yaw leans on the magnetometer, which sits near the motors and the
+            # 12 V run, so it is given a much looser variance. We do not fuse
+            # absolute orientation at all today; these are honest placeholders.
+            msg.orientation_covariance[0] = self.orientation_variance_rp
+            msg.orientation_covariance[4] = self.orientation_variance_rp
+            msg.orientation_covariance[8] = self.orientation_variance_yaw
 
-            # Get angular velocity (rad/s)
+            # Angular velocity (rad/s). This is the one the EKF wants: yaw rate
+            # is what rejects wheel slip, because a spinning wheel on sand
+            # reports rotation the gyro does not see.
             gyro = self.imu.gyro
-            if gyro is not None:
-                msg.angular_velocity.x = gyro[0]
-                msg.angular_velocity.y = gyro[1]
-                msg.angular_velocity.z = gyro[2]
-                msg.angular_velocity_covariance[0] = 0.01
+            if gyro is None or None in gyro:
+                # See above: publishing zeros here would assert "not
+                # rotating" with total confidence.
+                return
+            msg.angular_velocity.x = gyro[0]
+            msg.angular_velocity.y = gyro[1]
+            msg.angular_velocity.z = gyro[2]
+            msg.angular_velocity_covariance[0] = self.gyro_variance
+            msg.angular_velocity_covariance[4] = self.gyro_variance
+            msg.angular_velocity_covariance[8] = self.gyro_variance
 
-            # Get linear acceleration (m/s^2)
+            # Linear acceleration (m/s^2), gravity already removed by the BNO055
+            # fusion. Not fused today; two_d_mode plus wheel odometry covers it.
             accel = self.imu.linear_acceleration
-            if accel is not None:
+            if accel is None or None in accel:
+                msg.linear_acceleration_covariance[0] = -1.0
+            else:
                 msg.linear_acceleration.x = accel[0]
                 msg.linear_acceleration.y = accel[1]
                 msg.linear_acceleration.z = accel[2]
-                msg.linear_acceleration_covariance[0] = 0.01
+                msg.linear_acceleration_covariance[0] = self.accel_variance
+                msg.linear_acceleration_covariance[4] = self.accel_variance
+                msg.linear_acceleration_covariance[8] = self.accel_variance
 
             self.publisher_.publish(msg)
 

@@ -14,6 +14,14 @@
     <arg name="launch_gps" default="false" />
     <arg name="launch_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
     <arg name="launch_zed" default="true" />
+    <!-- Start joy_node and teleop_twist_joy in this launch, the way Capybara
+         does, so one command brings up the robot and the pad. Default false so
+         a bare launch is unchanged and nothing grabs the joystick device
+         unasked. twist_mux still arbitrates; this publishes to /cmd_vel_joy
+         exactly like teleop_joystick.sh, so the pad keeps priority 100 and
+         still overrides Nav2. Do NOT run teleop_joystick.sh at the same time,
+         two teleop_twist_joy instances would both publish and fight. -->
+    <arg name="use_joystick" default="false" description="bring up the pad in this launch (publishes to /cmd_vel_joy)" />
 
     <!-- ==================== PATHS ==================== -->
     <let name="urdf_path"
@@ -57,6 +65,13 @@
             <arg name="publish_urdf" value="true" />
             <arg name="publish_tf" value="false" />  <!-- EKF owns odom -> base_footprint -->
             <arg name="publish_map_tf" value="false" />
+            <!-- Our deviations from the VENDORED zed config. The wrapper loads
+                 common_stereo.yaml then zed2i.yaml, both under
+                 src/vendors/zed_wrapper and both overwritten by an SDK or
+                 wrapper upgrade, so settings edited into them revert silently.
+                 This file is appended last and wins over both. -->
+            <arg name="ros_params_override_path"
+                 value="$(find-pkg-share gerbil_bringup)/config/zed_override.yaml" />
         </include>
     </group>
 
@@ -112,6 +127,29 @@
         <node pkg="twist_mux" exec="twist_mux" name="twist_mux" output="screen">
             <param from="$(find-pkg-share gerbil_bringup)/config/twist_mux.yaml" />
             <remap from="cmd_vel_out" to="/diff_drive_controller/cmd_vel_unstamped" />
+        </node>
+    </group>
+
+    <!-- ==================== JOYSTICK (use_joystick:=true) ==================== -->
+    <!-- Values match scripts/teleop_joystick.sh and teleop_common.sh so the pad
+         feels identical whichever way it is started. Hold L1 (button 4) as the
+         deadman, then the left stick drives. autorepeat_rate republishes a HELD
+         stick so it does not go stale against twist_mux's 0.5 s timeout.
+         device_id is the SDL index, NOT a device path. joy_node in Humble is
+         SDL2 based and device_name wants the pad's SDL name. -->
+    <group if="$(var use_joystick)">
+        <node pkg="joy" exec="joy_node" name="joy_node" output="screen">
+            <param name="device_id" value="0" />
+            <param name="autorepeat_rate" value="20.0" />
+            <param name="deadzone" value="0.05" />
+        </node>
+        <node pkg="teleop_twist_joy" exec="teleop_node" name="teleop_twist_joy" output="screen">
+            <param name="enable_button" value="4" />
+            <param name="axis_linear.x" value="1" />
+            <param name="scale_linear.x" value="0.3" />
+            <param name="axis_angular.yaw" value="0" />
+            <param name="scale_angular.yaw" value="1.0" />
+            <remap from="cmd_vel" to="/cmd_vel_joy" />
         </node>
     </group>
 
