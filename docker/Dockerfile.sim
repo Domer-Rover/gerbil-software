@@ -1,0 +1,83 @@
+# Gerbil simulation container: ROS 2 Humble + Gazebo Fortress in a noVNC desktop.
+# Builds for linux/arm64 (Apple Silicon) and linux/amd64; the simulator is installed on both.
+#
+#   docker compose build gerbil-sim && docker compose up -d gerbil-sim
+#   open http://localhost:6080  (password: ubuntu), then run `gerbil-build` in a terminal
+#
+# Base image conventions (Tiryoh/docker-ros2-desktop-vnc, humble): /entrypoint.sh runs as
+# root, creates the $USER (ubuntu) account if missing, writes the VNC/noVNC supervisord
+# config and execs supervisord. We keep that ENTRYPOINT unchanged.
+FROM tiryoh/ros2-desktop-vnc:humble
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Gazebo Fortress (ros-gz pulls libignition-gazebo6, the ogre2 render engine and the
+# `ign` CLI from packages.ros.org on both arches) plus everything gerbil_bringup runs.
+# hadolint ignore=DL3008,DL3015
+RUN apt-get update && apt-get install -y \
+        ros-humble-ros-gz \
+        ros-humble-ign-ros2-control \
+        ros-humble-ros2-control \
+        ros-humble-ros2-controllers \
+        ros-humble-diff-drive-controller \
+        ros-humble-joint-state-broadcaster \
+        ros-humble-controller-manager \
+        ros-humble-xacro \
+        ros-humble-robot-state-publisher \
+        ros-humble-joint-state-publisher \
+        ros-humble-joint-state-publisher-gui \
+        ros-humble-rviz2 \
+        ros-humble-navigation2 \
+        ros-humble-nav2-bringup \
+        ros-humble-nav2-collision-monitor \
+        ros-humble-robot-localization \
+        ros-humble-twist-mux \
+        ros-humble-laser-filters \
+        ros-humble-foxglove-bridge \
+        ros-humble-slam-toolbox \
+        ros-humble-teleop-twist-keyboard \
+        ros-humble-teleop-twist-joy \
+        ros-humble-joy \
+        ros-humble-cv-bridge \
+        python3-numpy \
+        python3-yaml \
+        python3-opencv \
+        python3-serial \
+        python3-colcon-common-extensions \
+        python3-rosdep \
+        mesa-utils \
+        nano \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Software rendering (no GPU in Docker on macOS). Mesa llvmpipe exposes GL 4.5 core,
+# enough for ogre2 (needs 3.3), so MESA_GL_VERSION_OVERRIDE is deliberately not set.
+# These also reach the VNC desktop, since supervisord inherits the container env.
+ENV LIBGL_ALWAYS_SOFTWARE=1 \
+    GALLIUM_DRIVER=llvmpipe \
+    COLCON_DEFAULTS_FILE=/opt/gerbil/colcon_defaults.yaml
+
+COPY docker/sim/colcon_defaults.yaml docker/sim/gerbil_env.sh /opt/gerbil/
+COPY docker/sim/gerbil-build /usr/local/bin/gerbil-build
+COPY docker/sim/gerbil-terminal.desktop /opt/gerbil/gerbil-terminal.desktop
+
+# Create ubuntu (uid 1000) now rather than leaving it to /entrypoint.sh, so the workspace
+# dirs (and the named volumes compose seeds from them) are owned by it, and ~/.bashrc
+# starts from /etc/skel. The entrypoint's own useradd then fails harmlessly ("already
+# exists") and it continues. Its `grep -F ... || echo ...` bashrc lines find the lines
+# below already present, so the overlay sourcing stays last.
+RUN id ubuntu >/dev/null 2>&1 \
+        || useradd --create-home --uid 1000 --shell /bin/bash --user-group --groups adm,sudo ubuntu \
+    && chmod 0755 /usr/local/bin/gerbil-build \
+    && mkdir -p /home/ubuntu/ros2_ws/src /home/ubuntu/ros2_ws/build \
+                /home/ubuntu/ros2_ws/install /home/ubuntu/ros2_ws/log /home/ubuntu/Desktop \
+    && install -m 0755 /opt/gerbil/gerbil-terminal.desktop /home/ubuntu/Desktop/gerbil-terminal.desktop \
+    && { echo 'source /opt/ros/humble/setup.bash'; \
+         echo 'source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash'; \
+         echo 'source /opt/gerbil/gerbil_env.sh'; } >> /home/ubuntu/.bashrc \
+    && echo '[ "$(id -un)" = ubuntu ] || source /opt/gerbil/gerbil_env.sh' >> /etc/bash.bashrc \
+    && chown -R ubuntu:ubuntu /home/ubuntu
+
+WORKDIR /home/ubuntu/ros2_ws
