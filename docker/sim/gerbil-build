@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Build the Gerbil workspace for simulation.
+#
+#   gerbil-build                       # build everything sim needs
+#   gerbil-build --packages-select gerbil_gazebo
+#
+# Always builds as the `ubuntu` user in /home/ubuntu/ros2_ws, against /opt/ros/humble
+# only (a clean environment, so an already-sourced overlay cannot leak in).
+# The ignore list and --symlink-install come from /opt/gerbil/colcon_defaults.yaml.
+# Note: passing your own --packages-ignore replaces that list, it does not extend it.
+set -eo pipefail
+
+WS=/home/ubuntu/ros2_ws
+DEFAULTS=/opt/gerbil/colcon_defaults.yaml
+
+if [ "$(id -un)" != "ubuntu" ]; then
+    if [ "$(id -u)" -eq 0 ]; then
+        exec gosu ubuntu "$0" "$@"
+    fi
+    echo "gerbil-build: run this as ubuntu or root, not $(id -un)" >&2
+    exit 1
+fi
+
+if [ -z "$(ls -A "$WS/src" 2>/dev/null)" ]; then
+    echo "gerbil-build: $WS/src is empty; is ./src mounted?" >&2
+    exit 1
+fi
+
+echo "gerbil-build: colcon build in $WS (defaults: $DEFAULTS)"
+cd "$WS"
+env -i \
+    HOME=/home/ubuntu USER=ubuntu TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    COLCON_DEFAULTS_FILE="$DEFAULTS" \
+    bash -c 'source /opt/ros/humble/setup.bash && colcon build "$@"' gerbil-build "$@"
+
+cat <<EOF
+
+gerbil-build: done. In each open terminal run:
+    source $WS/install/setup.bash
+(new terminals source it automatically)
+EOF
