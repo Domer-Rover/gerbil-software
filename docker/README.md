@@ -26,7 +26,8 @@ so GUI apps can reach the VNC display.
   `ign gazebo --render-engine ogre`. It is not set by default, because it only changes the
   GL version Mesa reports, not what it can do.
 
-See `docs/simulation.md` for running the simulator itself.
+See [docs/simulation.md](../docs/simulation.md) for running the simulator itself: worlds, goals,
+obstacles, odometry grading, tuning exercises and troubleshooting.
 
 ## Dockerfile.dev
 Development environment with GUI support. For simulation, prefer gerbil-sim above.

@@ -61,6 +61,8 @@ ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_joystick:=true
 
 Connect Foxglove to `ws://<jetson>:8765`. See [Build and run](docs/build-and-run.md) for the other launch files, the closed-loop encoder procedure, and checks.
 
+No robot to hand? Run Gerbil in Gazebo on your laptop: [docs/simulation.md](docs/simulation.md).
+
 ## Built With
 
 - **ROS 2 Humble**: middleware for every package in this repo
