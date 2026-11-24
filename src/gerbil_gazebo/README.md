@@ -25,6 +25,27 @@ All sim work is built against this contract. Change it only in a deliberate, rev
 | `/diff_drive_controller/odom` | nav_msgs/Odometry | the real diff_drive_controller, via ign_ros2_control |
 | `/sim/ground_truth/odom` | nav_msgs/Odometry | true pose, for evaluation **only**, never fused |
 
+### Gazebo-side topic names (set in `gerbil.gazebo.xacro`, bridged in `config/bridge.yaml`)
+| gz topic | gz type | bridged to ROS |
+|---|---|---|
+| `/clock` (world) | ignition.msgs.Clock | `/clock` |
+| `/scan_raw` | ignition.msgs.LaserScan | `/scan_raw` |
+| `/zed/zed_node/odom` | ignition.msgs.Odometry | `/zed/zed_node/odom` |
+| `/sim/ground_truth/odom` | ignition.msgs.Odometry | `/sim/ground_truth/odom` |
+| `/sim/zed_depth/points` (optional) | ignition.msgs.PointCloudPacked | `/zed/zed_node/point_cloud/cloud_registered` |
+
+Gazebo's own TF topics (e.g. `/model/gerbil/tf`) are **never** bridged.
+The spawned model is named `gerbil`.
+
+### World registry: `config/worlds.yaml` (owned by the worlds workstream)
+```yaml
+school_loop:              # key == launch world:= value == <world name=...> in the SDF
+  file: school_loop.sdf   # relative to share/gerbil_gazebo/worlds
+  spawn: {x: 0.0, y: 0.0, z: 0.05, yaw: 0.0}
+```
+The world SDF must load these systems: Physics, UserCommands, SceneBroadcaster, and Sensors with
+`render_engine ogre2`. The robot does **not** load them.
+
 ### Frames
 `odom -> base_footprint` is published by the EKF only. Below that are `base_link`, then `laser_frame`
 (yaw -pi/2, unchanged, so the laser_filter.yaml bounds stay valid) and `zed_camera_link`.
