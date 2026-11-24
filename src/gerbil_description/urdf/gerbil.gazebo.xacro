@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- STUB. Workstream B fills this with the ign_ros2_control plugin, the
+         LD19 gpu_lidar, the ZED VIO stand-in and friction. Included only
+         when sim_mode is gazebo. -->
+</robot>
