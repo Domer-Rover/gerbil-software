@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- 0.4 m cube, the team's standard test obstacle.
+     Static, primitive collisions. The model origin is the centre of its footprint on the
+     ground (z = 0 is the floor). Spawn with scripts/spawn_obstacle.sh. -->
+<sdf version="1.8">
+  <model name="box">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <pose>0 0 0.2 0 0 0</pose>
+        <geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0.2 0 0 0</pose>
+        <geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+        <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>0.9 0.1 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

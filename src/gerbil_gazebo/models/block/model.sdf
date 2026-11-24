@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- Chair-sized block, 0.45 x 0.45 x 0.8 m.
+     Static, primitive collisions. The model origin is the centre of its footprint on the
+     ground (z = 0 is the floor). Spawn with scripts/spawn_obstacle.sh. -->
+<sdf version="1.8">
+  <model name="block">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <pose>0 0 0.4 0 0 0</pose>
+        <geometry><box><size>0.45 0.45 0.8</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0.4 0 0 0</pose>
+        <geometry><box><size>0.45 0.45 0.8</size></box></geometry>
+        <material><ambient>1.0 0.85 0.0 1</ambient><diffuse>1.0 0.85 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+    </link>
+  </model>
+</sdf>
