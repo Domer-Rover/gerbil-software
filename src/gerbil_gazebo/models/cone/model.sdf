@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!-- Traffic cone, 0.45 m tall, 0.36 m base.
+     Static, primitive collisions. The model origin is the centre of its footprint on the
+     ground (z = 0 is the floor). Spawn with scripts/spawn_obstacle.sh. -->
+<sdf version="1.8">
+  <model name="cone">
+    <static>true</static>
+    <link name="link">
+      <collision name="base_col">
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry><box><size>0.36 0.36 0.03</size></box></geometry>
+      </collision>
+      <collision name="body_col">
+        <pose>0 0 0.24 0 0 0</pose>
+        <geometry><cylinder><radius>0.11</radius><length>0.42</length></cylinder></geometry>
+      </collision>
+      <visual name="base">
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry><box><size>0.36 0.36 0.03</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+      <visual name="tier_0">
+        <pose>0 0 0.095 0 0 0</pose>
+        <geometry><cylinder><radius>0.14</radius><length>0.13</length></cylinder></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+      <visual name="tier_1">
+        <pose>0 0 0.21 0 0 0</pose>
+        <geometry><cylinder><radius>0.11</radius><length>0.1</length></cylinder></geometry>
+        <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+      <visual name="tier_2">
+        <pose>0 0 0.31 0 0 0</pose>
+        <geometry><cylinder><radius>0.085</radius><length>0.1</length></cylinder></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+      <visual name="tier_3">
+        <pose>0 0 0.405 0 0 0</pose>
+        <geometry><cylinder><radius>0.055</radius><length>0.09</length></cylinder></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular></material>
+      </visual>
+    </link>
+  </model>
+</sdf>
