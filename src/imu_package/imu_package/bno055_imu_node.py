@@ -119,8 +119,9 @@ class BNO055IMUNode(Node):
             # reports rotation the gyro does not see.
             gyro = self.imu.gyro
             if gyro is None or None in gyro:
-                return  # see above -- publishing zeros here would assert
-                        # "not rotating" with total confidence
+                # See above: publishing zeros here would assert "not
+                # rotating" with total confidence.
+                return
             msg.angular_velocity.x = gyro[0]
             msg.angular_velocity.y = gyro[1]
             msg.angular_velocity.z = gyro[2]
