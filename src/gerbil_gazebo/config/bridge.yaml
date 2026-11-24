@@ -1,0 +1,46 @@
+# ros_gz_bridge parameter_bridge config for Gerbil in Gazebo Fortress.
+# Loaded by launch/sim.launch.py as the bridge node's config_file parameter.
+#
+# Topic names and types are fixed by the contract in ../README.md. Every
+# entry is GZ_TO_ROS: the robot is driven through ign_ros2_control, so
+# nothing has to cross the other way.
+#
+# Gazebo's own TF topics (e.g. /model/gerbil/tf) are NEVER bridged. The EKF
+# is the only publisher of odom -> base_footprint, in sim exactly as on the
+# robot, and a second publisher would make that transform jump.
+#
+# Fortress names its message types ignition.msgs.*, not gz.msgs.* (that
+# spelling arrived with Garden). Keys verified against ros_gz_bridge
+# 0.244.27 for Humble.
+#
+# The optional depth cloud lives in bridge_depth_camera.yaml so that, with
+# depth_camera:=false, nothing subscribes to a gz topic that does not exist.
+
+# Sim time. Every node runs with use_sim_time:=true and follows this.
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: ignition.msgs.Clock
+  direction: GZ_TO_ROS
+
+# Simulated LD19. Same name and frame (laser_frame) as the real driver, so
+# the unchanged laser_filters chain turns it into /scan.
+- ros_topic_name: /scan_raw
+  gz_topic_name: /scan_raw
+  ros_type_name: sensor_msgs/msg/LaserScan
+  gz_type_name: ignition.msgs.LaserScan
+  direction: GZ_TO_ROS
+
+# ZED visual odometry stand-in, fused by the EKF exactly like the real one.
+- ros_topic_name: /zed/zed_node/odom
+  gz_topic_name: /zed/zed_node/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS
+
+# True pose, for evaluation ONLY (scripts/odom_error.py, RViz). Never fuse it.
+- ros_topic_name: /sim/ground_truth/odom
+  gz_topic_name: /sim/ground_truth/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS
