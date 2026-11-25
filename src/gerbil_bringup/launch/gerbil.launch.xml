@@ -207,8 +207,8 @@
          so restarting everything to attach a pad was wasteful. Run whichever
          you want in a second terminal:
 
-           ros2 run gerbil_bringup teleop_keyboard.sh
-           ros2 run gerbil_bringup teleop_joystick.sh
+           ~/gerbil-software/scripts/teleop_keyboard.sh
+           ~/gerbil-software/scripts/teleop_joystick.sh
 
          Both publish to their twist_mux input topic and share their speed
          settings from scripts/teleop_common.sh, so they feel identical.

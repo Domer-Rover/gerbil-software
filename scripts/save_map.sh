@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Save map into the same directory as this script with a timestamped name.
-MAP_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Save the current map, timestamped, into src/gerbil_bringup/maps (where the
+# launch files look for maps). MAP_DIR=/somewhere overrides.
+#   scripts/save_map.sh
+MAP_DIR="${MAP_DIR:-$(cd "$(dirname "$0")/../src/gerbil_bringup/maps" && pwd)}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BASENAME="map_${TIMESTAMP}"
 OUT="$MAP_DIR/$BASENAME"

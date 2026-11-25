@@ -44,7 +44,7 @@
        the fallback if local obstacle avoidance turns out to be needed. -->
   <exec_depend>nav2_dwb_controller</exec_depend>
   <exec_depend>nav2_smac_planner</exec_depend>
-  <!-- scripts/aruco_detector.py (not in any launch file) -->
+  <!-- top-level scripts/aruco_detector.py (not in any launch file) -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
