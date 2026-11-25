@@ -18,9 +18,12 @@
 # The optional depth cloud lives in gazebo_bridge_depth.yaml so that, with
 # use_sim_depth:=false, nothing subscribes to a gz topic that does not exist.
 
-# Simulated LD19. Same name and frame (laser_frame) as the real driver, so
-# the unchanged laser_filters chain turns it into /scan.
-- ros_topic_name: /scan_raw
+# Simulated LD19. Bridged to /sim/scan_raw_ideal, NOT straight to /scan_raw:
+# oracle_sim's scan_dropout_sim_relay.py drops a share of returns the way the
+# real LD19 does (issue #24, ~35 % invalid) and republishes /scan_raw, which
+# the unchanged laser_filters chain turns into /scan. Frame laser_frame, as
+# the real driver.
+- ros_topic_name: /sim/scan_raw_ideal
   gz_topic_name: /scan_raw
   ros_type_name: sensor_msgs/msg/LaserScan
   gz_type_name: ignition.msgs.LaserScan

@@ -41,7 +41,7 @@ Unlike Capybara, Gerbil has wheel encoders, so it runs closed-loop velocity cont
 | `src/gerbil_bringup` | Launch files, Nav2/SLAM/EKF/controller configs |
 | `src/gerbil_description` | URDF and `ros2_control` block |
 | `src/gerbil_hw` | RoboClaw hardware interface for `ros2_control` |
-| `src/imu_package` | BNO055 driver (unused; the ZED2i IMU is used) |
+| `src/gerbil_imu` | BNO055 IMU driver (not on the robot yet; the ZED2i IMU is used)| BNO055 driver (unused; the ZED2i IMU is used) |
 | `src/vendors` | ZED ROS 2 wrapper, `roboclaw_serial`, `ldlidar_stl_ros2` |
 | `scripts` | Developer onboarding and hardware test scripts |
 | `udev` | Stable serial device names |

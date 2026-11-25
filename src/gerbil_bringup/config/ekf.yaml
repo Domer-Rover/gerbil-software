@@ -84,7 +84,7 @@ ekf_filter_node:
 
     # NO IMU SOURCE, AND THAT IS DELIBERATE.
     #
-    # Gerbil runs no external IMU. imu_package/bno055_imu_node exists in the
+    # Gerbil runs no external IMU. gerbil_imu/bno055_imu_node exists in the
     # tree but the chip is not on the robot. The ZED's own IMU is already
     # fused inside its visual odometry (imu_fusion in zed_override.yaml), so
     # adding /zed/zed_node/imu/data here would feed the filter one sensor

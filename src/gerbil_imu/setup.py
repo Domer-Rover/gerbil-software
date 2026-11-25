@@ -3,7 +3,7 @@ import os
 
 from setuptools import find_packages, setup
 
-package_name = 'imu_package'
+package_name = 'gerbil_imu'
 
 setup(
     name=package_name,
@@ -27,8 +27,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'bno055_imu = imu_package.bno055_imu_node:main',
-            'imu_test_sub = imu_package.imu_test_subscriber:main',
+            'bno055_imu = gerbil_imu.bno055_imu_node:main',
+            'imu_test_sub = gerbil_imu.imu_test_subscriber:main',
         ],
     },
 )

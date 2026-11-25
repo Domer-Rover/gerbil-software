@@ -27,7 +27,7 @@ cd /home/ubuntu/ros2_ws
 colcon build
 source install/setup.bash
 
-ros2 launch imu_package bno055_imu.launch.py
+ros2 launch gerbil_imu bno055_imu.launch.py
 ```
 
 ### Dev Machine Setup

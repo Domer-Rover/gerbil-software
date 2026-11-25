@@ -247,7 +247,14 @@ planner_server:
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 3.5
-      cost_travel_multiplier: 2.0
+      # 3.5, raised from 2.0 (2026-11-25 hardware test). SmacPlanner2D plans
+      # for a POINT and takes all its clearance from inflation cost. At 2.0 it
+      # ran the path through the cheap end of the gradient, so with a 0.4 m box
+      # centred in the 2.44 m hallway it swerved late, and RPP's full-footprint
+      # check stopped it before the 0.59 m tail clipped the box (bags
+      # nav_3m_box_centre*). Higher = cost matters more vs distance, so the
+      # path bends earlier and wider. A/B bag: nav_3m_box_centre_ctm35.
+      cost_travel_multiplier: 3.5
       use_final_approach_orientation: true
 
 behavior_server:

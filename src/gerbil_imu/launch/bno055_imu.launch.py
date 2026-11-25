@@ -10,7 +10,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Get the package directory
-    pkg_dir = get_package_share_directory('imu_package')
+    pkg_dir = get_package_share_directory('gerbil_imu')
 
     # Path to config file
     config_file = os.path.join(pkg_dir, 'config', 'bno055_params.yaml')
@@ -30,7 +30,7 @@ def generate_launch_description():
 
     # BNO055 IMU node
     imu_node = Node(
-        package='imu_package',
+        package='gerbil_imu',
         executable='bno055_imu',
         name='bno055_imu_node',
         output='screen',
