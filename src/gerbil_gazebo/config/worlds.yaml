@@ -24,3 +24,13 @@ mdrs_utah:
 indiana_dunes:
   file: indiana_dunes.sdf
   spawn: {x: 2.0, y: 0.0, z: 1.86, yaw: 0.0}
+
+# The real Gerbil test hallway: a square basement loop, VERIFIED 2.44 m (8 ft)
+# wide. The 20 x 20 m outer size is a PLACEHOLDER - measure the real loop and
+# regenerate:
+#   scripts/gen_loop_world.py --name basement_loop --outer-length L --outer-width W \
+#       --corridor 2.44 --doors 0
+# With inflation_radius 0.70 this leaves a ~1.04 m zero-cost lane down the middle.
+basement_loop:
+  file: basement_loop.sdf
+  spawn: {x: 0.0, y: -8.78, z: 0.05, yaw: 0.0}
