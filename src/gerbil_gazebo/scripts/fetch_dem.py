@@ -547,10 +547,15 @@ def main():
 
     with open(os.path.join(model_dir, 'model.sdf'), 'w') as fh:
         fh.write(terrain_model_sdf(args.site, cfg, args.size, relief))
+    # Fortress cannot use a float DEM as a physics heightmap, so the shipped
+    # model is a mesh. This overwrites the heightmap model.sdf written above.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import dem_to_mesh
+    dem_to_mesh.convert(model_dir, args.size)
     with open(os.path.join(model_dir, 'model.config'), 'w') as fh:
         fh.write('<?xml version="1.0"?>\n<model>\n  <name>%s</name>\n  <version>1.0</version>\n'
                  '  <sdf version="1.8">model.sdf</sdf>\n  <author><name>Gerbil team</name></author>\n'
-                 '  <description>%s: USGS 3DEP DEM heightmap, %s x %s m.</description>\n</model>\n'
+                 '  <description>%s: USGS 3DEP DEM terrain mesh, %s x %s m.</description>\n</model>\n'
                  % (cfg['model'], cfg['title'], fmt(args.size), fmt(args.size)))
     files = sorted(os.path.relpath(os.path.join(dp, f), model_dir)
                    for dp, _, fs in os.walk(model_dir) for f in fs if f != 'README.md')

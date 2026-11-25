@@ -69,7 +69,7 @@ The renamed real-robot args (`use_lidar`, `use_zed`, `use_gps`, `use_rviz`, `use
 | World | What |
 |---|---|
 | `school_loop` | Rectangular ring corridor, 3.66 m (12 ft) wide, 40 x 25 m outer by default |
-| `mdrs_utah` | URC site terrain (38.40547, -110.79002) from a USGS DEM heightmap |
+| `mdrs_utah` | URC site terrain (38.40547, -110.79002) from 1 m USGS lidar, as a triangle mesh |
 | `indiana_dunes` | Dune/beach terrain patch (stretch) |
 
 Drop an obstacle live with `ros2 run gerbil_gazebo spawn_obstacle.sh <box|cone|trash_can|block> x y`.

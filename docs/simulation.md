@@ -526,7 +526,7 @@ performance issue.
 | No `/scan` | Bridge or laser_filters chain | `ros2 topic hz /scan_raw` (bridge, from the gpu_lidar). If that is fine, `ros2 topic hz /scan` (laser_filters). No `/scan_raw` usually means the sensors did not render: see the black-window row |
 | Nav2 says "Timed out waiting for transform from base_footprint to odom" | The EKF has no input yet | Normal until the controllers are active. If it persists, check `ros2 topic hz /diff_drive_controller/odom` and `/zed/zed_node/odom` |
 | A goal fails at once | Goal outside the 20 x 20 m global costmap, or inside a wall | Section 5 and exercise 9b. Remember that goals are odom, spawn-relative |
-| Robot sinks into or flies off the terrain, or its height looks wrong | Heightmap orientation or scale | **Report it** with the world name and a screenshot. Check whether the terrain looks mirrored against the site README |
+| Robot sinks into or flies off the terrain, or its height looks wrong | Terrain mesh orientation or scale (regenerate with `scripts/dem_to_mesh.py --all`) | **Report it** with the world name and a screenshot. Check whether the terrain looks mirrored against the site README |
 | `spawn_obstacle.sh`: "no running world found" | Sim not up, or `ign` cannot see it | Set `WORLD=<name>` and check `ign service -l` lists `/world/<name>/create` |
 | Port 6080 already in use | `ros-dev` is running | `docker compose stop ros-dev` |
 | Strange build errors after an image update | Stale build volumes | `docker compose down -v`, then `gerbil-build` |
