@@ -19,7 +19,7 @@ Third-party ROS2 packages vendored for build consistency and offline development
 ### ldlidar_stl_ros2
 - Source: [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2)
 - Version: vendored 2026-09-28 (upstream bf668a8)
-- Purpose: driver for the LD19 LIDAR (configured as LDLiDAR_LD06 — same sensor core)
+- Purpose: driver for the LD19 LIDAR (configured as LDLiDAR_LD19. LD06 and LD19 take identical code paths in tofbf.cpp and lipkg.cpp, so the old LD06 setting behaved the same)
 - License: See package LICENSE
 - Not in the ROS index, which is why it is vendored rather than installed with rosdep
 

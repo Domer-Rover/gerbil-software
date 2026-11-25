@@ -125,7 +125,7 @@
          instead, so the SAME filter chain and bounds produce /scan. -->
     <group if="$(var use_lidar)">
         <node unless="$(var use_sim)" pkg="ldlidar_stl_ros2" exec="ldlidar_stl_ros2_node" name="ldlidar_node" output="screen">
-            <param name="product_name" value="LDLiDAR_LD06" />
+            <param name="product_name" value="LDLiDAR_LD19" />
             <param name="topic_name" value="scan_raw" />
             <param name="port_name" value="$(var lidar_port)" />
             <param name="port_baudrate" value="230400" />
