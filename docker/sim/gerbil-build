@@ -26,13 +26,27 @@ if [ -z "$(ls -A "$WS/src" 2>/dev/null)" ]; then
     exit 1
 fi
 
-echo "gerbil-build: colcon build in $WS (defaults: $DEFAULTS)"
+# Low-memory guard. Each parallel C++ compile can take ~1 GB, and an 8 GB Mac
+# usually gives Docker 5-6 GB, so an unbounded build can get OOM-killed.
+# Allow one worker per ~1.5 GB of container RAM, at least 1. Passing
+# --parallel-workers yourself overrides this.
+EXTRA=()
+if [[ " $* " != *" --parallel-workers "* ]]; then
+    mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    workers=$(( mem_kb / 1500000 ))
+    (( workers < 1 )) && workers=1
+    (( workers > $(nproc) )) && workers=$(nproc)
+    EXTRA=(--parallel-workers "$workers")
+fi
+
+echo "gerbil-build: colcon build in $WS (defaults: $DEFAULTS) ${EXTRA[*]}"
 cd "$WS"
 env -i \
     HOME=/home/ubuntu USER=ubuntu TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     COLCON_DEFAULTS_FILE="$DEFAULTS" \
-    bash -c 'source /opt/ros/humble/setup.bash && colcon build "$@"' gerbil-build "$@"
+    MAKEFLAGS="-j${EXTRA[1]:-$(nproc)}" \
+    bash -c 'source /opt/ros/humble/setup.bash && colcon build "$@"' gerbil-build "${EXTRA[@]}" "$@"
 
 cat <<EOF
 
