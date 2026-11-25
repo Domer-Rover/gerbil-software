@@ -11,23 +11,34 @@
          is real in both modes. Duty cycle does not mean open-loop odometry. -->
     <xacro:arg name="use_duty_cycle" default="true" />
     <xacro:arg name="serial_port" default="/dev/gerbil_roboclaw" />
+    <!-- use_sim false = real or mock hardware as selected above. true = the
+         ign_ros2_control plugin drives the joints inside Gazebo Fortress, and
+         use_mock_hardware is ignored. See oracle_sim/README.md in oracle-software. -->
+    <xacro:arg name="use_sim" default="false" />
+    <xacro:property name="sim_gazebo" value="${'$(arg use_sim)' in ('true', 'True', '1')}" />
 
     <ros2_control name="GerbilRoboClawSystem" type="system">
         <!-- Mock hardware for simulation or testing without actual RoboClaw -->
-        <xacro:if value="$(arg use_mock_hardware)">
+        <xacro:if value="${sim_gazebo}">
+            <hardware>
+                <plugin>ign_ros2_control/IgnitionSystem</plugin>
+            </hardware>
+        </xacro:if>
+
+        <xacro:if value="${not sim_gazebo and '$(arg use_mock_hardware)' in ('true', 'True', '1')}">
             <hardware>
                 <plugin>mock_components/GenericSystem</plugin>
             </hardware>
         </xacro:if>
 
         <!-- Real RoboClaw hardware (use when SSH'd into Jetson) -->
-        <xacro:unless value="$(arg use_mock_hardware)">
+        <xacro:if value="${not sim_gazebo and '$(arg use_mock_hardware)' not in ('true', 'True', '1')}">
             <hardware>
                 <plugin>gerbil_hw/RoboClawHardwareInterface</plugin>
                 <param name="serial_port">$(arg serial_port)</param>
                 <param name="use_duty_cycle">$(arg use_duty_cycle)</param>
             </hardware>
-        </xacro:unless>
+        </xacro:if>
 
         <!-- joints that are defined and do not change whether using mock hardware or actual roboclaw hardware -->
         <joint name="base_left_wheel_joint">

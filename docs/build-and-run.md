@@ -22,8 +22,8 @@ ros2 launch gerbil_bringup gerbil_nav2.launch.py       # Nav2, odom frame, no ma
 ros2 launch gerbil_bringup gerbil_slam.launch.py       # build a map
 ```
 
-Common args: `use_mock_hardware:=true`, `use_joystick:=true`, `launch_zed:=false`,
-`launch_lidar:=true`, `launch_gps:=true`, `use_duty_cycle:=false` (closed-loop
+Common args: `use_mock_hardware:=true`, `use_joystick:=true`, `use_zed:=false`,
+`use_lidar:=true`, `use_gps:=true`, `use_duty_cycle:=false` (closed-loop
 velocity PID; see below). The Nav2 and SLAM launches turn the LIDAR on
 themselves.
 

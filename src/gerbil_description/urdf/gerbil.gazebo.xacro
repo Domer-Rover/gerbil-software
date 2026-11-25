@@ -1,0 +1,242 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- GAZEBO FORTRESS EXTENSIONS. Included by gerbil.urdf.xacro only when
+         use_sim is true, so the real robot never sees any of this. The
+         interface contract (topic names, frames) is oracle_sim/README.md in the
+         oracle-software repo. config/gazebo_bridge.yaml must mirror the sensors here.
+         Same comment rules as mobile_base.xacro - no colon followed by a
+         space, no colon at the end of a line, no hash character, no double
+         hyphen. They apply to the element text too, because the plugin
+         passes the whole URDF through rcl, which parses it as YAML.
+
+         HOW THIS LANDS IN SDF. sdformat lumps every fixed joint, so
+         base_link, caster_wheel_link, imu_link, zed_camera_link and
+         laser_frame all merge into ONE Gazebo link named base_footprint,
+         which is the canonical link, and the model frame IS base_footprint.
+         base_footprint has no inertial of its own, which is fine, lumping
+         hands it the merged inertial (7.385 kg, the wheels add 1.0 kg).
+         The tiny 1e-6 inertias of the sensor links are therefore harmless,
+         after the parallel-axis shift they are noise next to the deck.
+         Extensions below that reference a lumped link still apply only to
+         the collisions, visuals and sensors that came from that link.
+         Gazebo also adds no links or joints, so the TF tree is unchanged.
+
+         World systems (Physics, Sensors, SceneBroadcaster, UserCommands)
+         are loaded by the world SDF, never here. -->
+
+    <!-- Controllers yaml handed to the ign_ros2_control controller_manager.
+         An arg so it can be given an absolute path when xacro runs outside
+         a sourced workspace. The default is only evaluated when the arg is
+         not passed. -->
+    <xacro:arg name="controllers_file"
+               default="$(find gerbil_bringup)/config/gerbil_controllers.yaml" />
+    <!-- Optional low-res depth camera standing in for the ZED depth. Off by
+         default because rendering it under software GL costs real time. -->
+    <xacro:arg name="use_sim_depth" default="false" />
+
+    <!-- ==================== ROS2 CONTROL ==================== -->
+    <!-- ign_ros2_control (humble). The library and class names below are the
+         original ign names, which current releases keep as aliases of
+         gz_ros2_control. It reads robot_description from the
+         robot_state_publisher node, starts a controller_manager node named
+         controller_manager in namespace /, so /controller_manager, forces
+         use_sim_time true on it and every controller it loads, and drives
+         the two wheel joints through the IgnitionSystem hardware declared in
+         mobile_base.ros2_control.xacro. update_rate comes from the yaml. -->
+    <gazebo>
+        <plugin filename="ign_ros2_control-system"
+                name="ign_ros2_control::IgnitionROS2ControlPlugin">
+            <parameters>$(arg controllers_file)</parameters>
+            <robot_param>robot_description</robot_param>
+            <robot_param_node>robot_state_publisher</robot_param_node>
+        </plugin>
+    </gazebo>
+
+    <!-- ==================== CONTACT AND FRICTION ==================== -->
+    <!-- Fortress runs DART, which reads only mu, mu2, fdir1, slip1, slip2
+         and bounce from a collision surface. kp and kd are ODE-only and DART
+         ignores them, contacts are hard constraints, so they are left out
+         rather than pretending to tune anything. DART takes the smaller mu
+         of the two touching surfaces. -->
+    <!-- Drive wheels, rubber on floor -->
+    <gazebo reference="left_wheel_link">
+        <mu1>1.0</mu1>
+        <mu2>1.0</mu2>
+    </gazebo>
+    <gazebo reference="right_wheel_link">
+        <mu1>1.0</mu1>
+        <mu2>1.0</mu2>
+    </gazebo>
+    <!-- The caster is a fixed sphere, so it has to slide to act like a swivel
+         caster. The lumped centre of mass sits 0.243 m behind the axle, so
+         the caster carries about 45 percent of the 8.4 kg, roughly 37 N,
+         and mu 0.01 is a 0.37 N drag, close to a real caster rolling
+         resistance. -->
+    <gazebo reference="caster_wheel_link">
+        <mu1>0.01</mu1>
+        <mu2>0.01</mu2>
+    </gazebo>
+
+    <!-- ==================== VISUAL MATERIALS ==================== -->
+    <!-- Gazebo-only colours. The URDF colours still drive RViz. A material
+         set here replaces the URDF colour for every visual of that link,
+         which is why base_link, with its many differently coloured visuals,
+         keeps the URDF colours. -->
+    <xacro:macro name="gz_material" params="link ambient diffuse specular">
+        <gazebo reference="${link}">
+            <visual>
+                <material>
+                    <ambient>${ambient}</ambient>
+                    <diffuse>${diffuse}</diffuse>
+                    <specular>${specular}</specular>
+                </material>
+            </visual>
+        </gazebo>
+    </xacro:macro>
+    <!-- goBILDA grip tyres, matte black rubber -->
+    <xacro:gz_material link="left_wheel_link"
+                       ambient="0.03 0.03 0.03 1" diffuse="0.06 0.06 0.06 1" specular="0.05 0.05 0.05 1" />
+    <xacro:gz_material link="right_wheel_link"
+                       ambient="0.03 0.03 0.03 1" diffuse="0.06 0.06 0.06 1" specular="0.05 0.05 0.05 1" />
+    <xacro:gz_material link="caster_wheel_link"
+                       ambient="0.05 0.05 0.05 1" diffuse="0.1 0.1 0.1 1" specular="0.3 0.3 0.3 1" />
+    <!-- ZED2i, dark grey with a slight sheen -->
+    <xacro:gz_material link="zed_camera_link"
+                       ambient="0.12 0.12 0.13 1" diffuse="0.18 0.18 0.2 1" specular="0.4 0.4 0.4 1" />
+    <!-- LD19, near-black plastic housing -->
+    <xacro:gz_material link="laser_frame"
+                       ambient="0.04 0.04 0.04 1" diffuse="0.08 0.08 0.08 1" specular="0.2 0.2 0.2 1" />
+
+    <!-- ==================== LD19 LIDAR ==================== -->
+    <!-- gpu_lidar in laser_frame, which keeps its measured -pi/2 yaw. The
+         scan is standard counter-clockwise, -pi to just under pi, so a ray at
+         scan angle a points at a - pi/2 in base_link, exactly the convention
+         laser_filter.yaml was derived for. Its [0, pi] crop keeps base_link
+         angles [-pi/2, pi/2], the front half. 455 rays per turn at 10 Hz
+         matches the LD19 at 4500 samples per second. max_angle stops one
+         step short of pi so the first and last rays do not duplicate the
+         same direction. min range 0.05 clears the 0.035 m housing so the
+         sensor never sees itself, and no other part of the rover reaches
+         the scan plane, 0.221 m off the ground. Gaussian noise of 10 mm is
+         the LD19 datasheet accuracy. gpu_lidar sees VISUALS, not collisions. -->
+    <gazebo reference="laser_frame">
+        <sensor name="ld19" type="gpu_lidar">
+            <always_on>true</always_on>
+            <update_rate>10</update_rate>
+            <visualize>false</visualize>
+            <topic>/scan_raw</topic>
+            <ignition_frame_id>laser_frame</ignition_frame_id>
+            <lidar>
+                <scan>
+                    <horizontal>
+                        <samples>455</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${-pi}</min_angle>
+                        <max_angle>${pi - 2.0 * pi / 455}</max_angle>
+                    </horizontal>
+                    <vertical>
+                        <samples>1</samples>
+                        <resolution>1</resolution>
+                        <min_angle>0</min_angle>
+                        <max_angle>0</max_angle>
+                    </vertical>
+                </scan>
+                <range>
+                    <min>0.05</min>
+                    <max>12.0</max>
+                    <resolution>0.01</resolution>
+                </range>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.01</stddev>
+                </noise>
+            </lidar>
+        </sensor>
+    </gazebo>
+
+    <!-- ==================== ZED VIO STAND-IN ==================== -->
+    <!-- OdometryPublisher measures the MODEL pose, which is base_footprint.
+         xyz_offset moves the measured point onto zed_camera_link, so pose
+         and twist are those of the camera, like the real wrapper reports.
+         In dimensions 2 the linear twist is rotated by the current yaw into
+         the BODY frame, which is what robot_localization expects. The pose
+         is absolute in the Gazebo world, the EKF fuses only vy and vyaw from
+         this topic so that does not matter. gaussian_noise is one sigma
+         added to every twist component, m/s and rad/s alike, not to the
+         pose. The plain Odometry message carries no covariance, the
+         covariance twin on odom_with_covariance carries sigma squared on the
+         diagonal. Its Pose_V output goes to a sim-only topic that nobody
+         bridges. -->
+    <gazebo>
+        <plugin filename="ignition-gazebo-odometry-publisher-system"
+                name="ignition::gazebo::systems::OdometryPublisher">
+            <dimensions>2</dimensions>
+            <odom_publish_frequency>25</odom_publish_frequency>
+            <odom_topic>/zed/zed_node/odom</odom_topic>
+            <odom_covariance_topic>/zed/zed_node/odom_with_covariance</odom_covariance_topic>
+            <tf_topic>/sim/zed_vio/pose_v</tf_topic>
+            <odom_frame>odom</odom_frame>
+            <robot_base_frame>zed_camera_link</robot_base_frame>
+            <xyz_offset>${camera_x} 0 ${camera_z + wheel_radius}</xyz_offset>
+            <gaussian_noise>0.01</gaussian_noise>
+        </plugin>
+    </gazebo>
+
+    <!-- ==================== GROUND TRUTH ==================== -->
+    <!-- A second, noise-free OdometryPublisher. Gazebo instantiates a new
+         system for every plugin element, so two on one model is fine, as
+         long as every topic differs, including the covariance and Pose_V
+         topics whose defaults would otherwise collide. Pose is base_footprint
+         in the Gazebo world frame, named world here because nothing in TF
+         publishes it. For evaluation only, never fused. -->
+    <gazebo>
+        <plugin filename="ignition-gazebo-odometry-publisher-system"
+                name="ignition::gazebo::systems::OdometryPublisher">
+            <dimensions>2</dimensions>
+            <odom_publish_frequency>50</odom_publish_frequency>
+            <odom_topic>/sim/ground_truth/odom</odom_topic>
+            <odom_covariance_topic>/sim/ground_truth/odom_with_covariance</odom_covariance_topic>
+            <tf_topic>/sim/ground_truth/pose_v</tf_topic>
+            <odom_frame>world</odom_frame>
+            <robot_base_frame>base_footprint</robot_base_frame>
+        </plugin>
+    </gazebo>
+
+    <!-- ==================== OPTIONAL ZED DEPTH STAND-IN ==================== -->
+    <!-- depth_camera publishes the depth image on its topic and the cloud on
+         topic/points, so /sim/zed_depth/points. Gazebo writes the cloud
+         x-forward, y-left, z-up, not optical, so zed_camera_link is the
+         right frame id. 320x180 at 5 Hz keeps llvmpipe rendering cheap. The
+         near clip of 0.3 m is the ZED2i minimum depth. -->
+    <xacro:if value="${'$(arg use_sim_depth)' in ('true', 'True', '1')}">
+        <gazebo reference="zed_camera_link">
+            <sensor name="zed_depth" type="depth_camera">
+                <always_on>true</always_on>
+                <update_rate>5</update_rate>
+                <visualize>false</visualize>
+                <topic>/sim/zed_depth</topic>
+                <ignition_frame_id>zed_camera_link</ignition_frame_id>
+                <camera>
+                    <horizontal_fov>1.6</horizontal_fov>
+                    <image>
+                        <width>320</width>
+                        <height>180</height>
+                        <format>R_FLOAT32</format>
+                    </image>
+                    <clip>
+                        <near>0.3</near>
+                        <far>10.0</far>
+                    </clip>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.01</stddev>
+                    </noise>
+                </camera>
+            </sensor>
+        </gazebo>
+    </xacro:if>
+
+</robot>

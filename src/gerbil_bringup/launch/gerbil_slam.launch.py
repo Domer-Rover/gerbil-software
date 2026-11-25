@@ -34,10 +34,10 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
-            'launch_lidar': 'true',
-            'launch_rviz': 'false',
+            'use_lidar': 'true',
+            'use_rviz': 'false',
             'launch_imu': 'false',
-            'launch_zed': 'true',
+            'use_zed': 'true',
         }.items()
     )
 

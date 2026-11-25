@@ -1,4 +1,7 @@
 services:
+  # For simulation (Gazebo Fortress on Apple Silicon or x86), use the oracle-sim
+  # container in Domer-Rover/oracle-software. It mounts this repo's src/ and runs
+  # these exact configs. ros-dev shares port 6080 with it; run one at a time.
   ros-dev:
     build:
       context: .

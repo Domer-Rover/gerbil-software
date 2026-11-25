@@ -169,20 +169,20 @@ ros2 launch gerbil_bringup gerbil.launch.xml
 | Argument | Default | Options | Description |
 |----------|---------|---------|-------------|
 | `use_mock_hardware` | `true` | `true`, `false` | Enable mock hardware for testing without physical robot |
-| `launch_rviz` | `true` | `true`, `false` | Launch RViz visualization |
+| `use_rviz` | `true` | `true`, `false` | Launch RViz visualization |
 | `launch_imu` | `false` | `true`, `false` | Launch IMU node |
 
 ### Common Launch Commands
 
 ```bash
 # Development: Mock hardware with RViz
-ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=true launch_rviz:=true
+ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=true use_rviz:=true
 
 # Development: Mock hardware without RViz (headless)
-ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=true launch_rviz:=false
+ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=true use_rviz:=false
 
 # Jetson: Real hardware without RViz
-ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=false launch_rviz:=false
+ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=false use_rviz:=false
 
 # Jetson: Real hardware with IMU
 ros2 launch gerbil_bringup gerbil.launch.xml use_mock_hardware:=false launch_imu:=true

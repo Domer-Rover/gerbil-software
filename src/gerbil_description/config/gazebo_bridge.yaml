@@ -1,0 +1,44 @@
+# Gazebo -> ROS topics for GERBIL's simulated sensors. Lives here, next to
+# urdf/gerbil.gazebo.xacro, because it mirrors exactly the sensors that file
+# declares: change one, change the other. The simulator (oracle-software,
+# oracle_sim/launch/sim.launch.py) loads it through its config/robots.yaml and
+# bridges /clock itself, so /clock is not listed here.
+#
+# Every entry is GZ_TO_ROS: the robot is driven through ign_ros2_control, so
+# nothing has to cross the other way.
+#
+# Gazebo's own TF topics (e.g. /model/gerbil/tf) are NEVER bridged. The EKF
+# is the only publisher of odom -> base_footprint, in sim exactly as on the
+# robot, and a second publisher would make that transform jump.
+#
+# Fortress names its message types ignition.msgs.*, not gz.msgs.* (that
+# spelling arrived with Garden). Keys verified against ros_gz_bridge
+# 0.244.27 for Humble.
+#
+# The optional depth cloud lives in gazebo_bridge_depth.yaml so that, with
+# use_sim_depth:=false, nothing subscribes to a gz topic that does not exist.
+
+# Simulated LD19. Same name and frame (laser_frame) as the real driver, so
+# the unchanged laser_filters chain turns it into /scan.
+- ros_topic_name: /scan_raw
+  gz_topic_name: /scan_raw
+  ros_type_name: sensor_msgs/msg/LaserScan
+  gz_type_name: ignition.msgs.LaserScan
+  direction: GZ_TO_ROS
+
+# ZED visual odometry stand-in. Bridged to /sim/zed_odom_raw, NOT straight to
+# /zed/zed_node/odom: oracle_sim's zed_odom_sim_relay.py republishes it there after
+# dropping the one physically impossible sample Gazebo emits at spawn (a
+# -333 m/s spike in school_loop that teleported the EKF 13 m). See that script.
+- ros_topic_name: /sim/zed_odom_raw
+  gz_topic_name: /zed/zed_node/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS
+
+# True pose, for evaluation ONLY (oracle_sim's odom_error.py, RViz). Never fuse it.
+- ros_topic_name: /sim/ground_truth/odom
+  gz_topic_name: /sim/ground_truth/odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: ignition.msgs.Odometry
+  direction: GZ_TO_ROS

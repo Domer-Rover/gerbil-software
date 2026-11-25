@@ -67,7 +67,7 @@ motor at a time.
 ## 6. LIDAR
 
 ```bash
-ros2 launch gerbil_bringup gerbil_foxglove.launch.py launch_lidar:=true
+ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_lidar:=true
 ```
 
 In Foxglove, an object in front of the robot must appear in front on `/scan`.

@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://github.com/Domer-Rover/gerbil-software/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/Software%20Lead-Brandon%20Martinez-C1E1C1" alt="Software Lead">
+  <img src="https://img.shields.io/badge/Software%20Sublead-Gabriel%20Marques-C1E1C1" alt="Software Sublead">
   <a href="https://github.com/Domer-Rover/gerbil-software/actions/workflows/ci.yml"><img src="https://github.com/Domer-Rover/gerbil-software/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status"></a>
 </p>
 
@@ -59,7 +60,9 @@ colcon build --symlink-install && source install/setup.bash
 ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_joystick:=true
 ```
 
-Connect Foxglove to `ws://<jetson>:8765`. See [Build and run](docs/build-and-run.md) for the other launch files, the closed-loop encoder procedure, and checks.
+Connect Foxglove to `ws://<jetson>:8765`, or skip the live stream and record the run for replay: `ros2 run gerbil_bringup record_run.sh -n <name>` writes `~/bags/<date>_<name>/` (see `--help`). See [Build and run](docs/build-and-run.md) for the other launch files, the closed-loop encoder procedure, and checks.
+
+No robot to hand? Run Gerbil in Gazebo on your laptop with [oracle-software](https://github.com/Domer-Rover/oracle-software), which mounts this repo and runs its real configs.
 
 ## Built With
 

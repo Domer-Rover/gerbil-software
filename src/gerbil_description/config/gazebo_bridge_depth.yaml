@@ -1,0 +1,10 @@
+# Gerbil's optional simulated ZED depth cloud. oracle_sim's sim.launch.py
+# bridges it only with use_sim_depth:=true
+# (which also passes use_sim_depth:=true to xacro so the sensor exists).
+# The ROS name is the real ZED wrapper's registered cloud, so anything that
+# consumes the real cloud works unchanged in sim.
+- ros_topic_name: /zed/zed_node/point_cloud/cloud_registered
+  gz_topic_name: /sim/zed_depth/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: ignition.msgs.PointCloudPacked
+  direction: GZ_TO_ROS

@@ -21,6 +21,7 @@ install(
     scripts/aruco_detector.py
     scripts/teleop_keyboard.sh
     scripts/teleop_joystick.sh
+    scripts/record_run.sh
   DESTINATION lib/${PROJECT_NAME}
 )
 

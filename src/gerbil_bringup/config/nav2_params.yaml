@@ -135,13 +135,23 @@ controller_server:
       # How far along the path to sample for the heading to rotate toward.
       # Too small and it chases noise in the first path segment.
       forward_sampling_distance: 0.5
-      # Both must match the real limits in gerbil_controllers.yaml, which are
-      # angular.z.max_velocity 0.5 and angular.z.max_acceleration 0.5. A larger
-      # value here is simply clamped by the controller and makes the shim
-      # mispredict its own timing. max_angular_accel was 0.7, which did not
-      # match the 0.5 it claimed to.
+      # rotate_to_heading_angular_vel matches angular.z.max_velocity (0.5) in
+      # gerbil_controllers.yaml -- raise both together or neither.
+      #
+      # max_angular_accel is DELIBERATELY above the controller's 0.5 rad/s^2.
+      # Shared by the shim and RPP (same FollowPath namespace). Both rotate by
+      # clamping the next command to MEASURED angular speed +/- accel * dt. At
+      # 0.5 and 20 Hz the first command is 0.025 rad/s (1.4 deg/s), below the
+      # drivetrain's stiction, so the robot never starts turning, measured
+      # speed stays 0, and the command never ramps -- a deadlock, seen as
+      # rotate-in-place that never actually rotates. At 3.0 the first step is
+      # 0.15 rad/s, enough to break stiction. The real ramp is still enforced
+      # downstream: diff_drive_controller limits to 0.5 rad/s^2 against its
+      # own last command, so the robot does not accelerate any faster.
+      # Keep 3.0: RPP's rotate-to-goal-heading fires legitimately near every
+      # goal and would deadlock there too.
       rotate_to_heading_angular_vel: 0.5
-      max_angular_accel: 0.5
+      max_angular_accel: 3.0
       # Collision-check this far ahead while rotating. The footprint is
       # asymmetric with 0.55 m of tail behind the pivot, so rotation sweeps a
       # 0.60 m radius -- this is what stops it rotating into something.
@@ -170,9 +180,16 @@ controller_server:
       # here: the shim block above sets them, and a duplicate YAML key in the
       # same namespace silently keeps only the last one.
       desired_linear_vel: 0.25         # indoor; small robot
-      lookahead_dist: 0.4
-      min_lookahead_dist: 0.2
-      max_lookahead_dist: 0.6
+      # min_lookahead_dist MUST stay above xy_goal_tolerance (0.5). Humble's
+      # RPP decides "at the goal, rotate to goal heading" by measuring the
+      # distance to the LOOKAHEAD POINT, not to the goal. At standstill the
+      # velocity-scaled lookahead collapses to min_lookahead_dist, so with the
+      # old 0.2 < 0.5 every goal started in "arrived" mode - zero linear
+      # velocity, rotate in place forever, Failed to make progress, recovery.
+      # Found in Gazebo 2026-11-25 before any goal had been sent on hardware.
+      lookahead_dist: 0.6
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 0.9
       lookahead_time: 1.5
       transform_tolerance: 0.3
       use_velocity_scaled_lookahead_dist: true
@@ -184,6 +201,12 @@ controller_server:
       use_fixed_curvature_lookahead: false
       curvature_lookahead_dist: 0.25
       use_cost_regulated_linear_velocity_scaling: true  # slows near inflation potential field
+      # MUST equal cost_scaling_factor in BOTH costmaps' inflation_layer (1.5).
+      # RPP inverts the inflation exponential to turn a cell's cost back into
+      # a distance-from-obstacle for cost-regulated scaling. Left unset it
+      # silently defaults to 3.0 while the costmaps used 1.5, so RPP misjudged
+      # how close obstacles were.
+      inflation_cost_scaling_factor: 1.5
       regulated_linear_scaling_min_radius: 0.9
       # MUST be below desired_linear_vel or both regulation features above are
       # dead. RPP takes the minimum of the curvature- and cost-limited speeds
@@ -289,11 +312,12 @@ behavior_server:
     # before finishing the turn.
     max_rotational_vel: 0.5
     min_rotational_vel: 0.1
-    # 0.5 to match angular.z.max_acceleration in gerbil_controllers.yaml and
-    # max_angular_accel on the rotation shim. Was 0.7 while claiming to match
-    # them, so Spin modelled its own ramp-up 40% faster than the controller
+    # 0.5 to match angular.z.max_acceleration in gerbil_controllers.yaml. Was
+    # 0.7, so Spin modelled its own ramp-up 40% faster than the controller
     # delivers and could time out before finishing a turn -- the same bug as
     # max_rotational_vel above, in the acceleration term instead of velocity.
+    # (FollowPath.max_angular_accel is 3.0 on purpose, for a different reason:
+    # see the rotation shim block. Spin does not have that stiction deadlock.)
     rotational_acc_lim: 0.5
 
 # Both costmaps use odom frame with rolling windows — no static map needed.
