@@ -62,6 +62,8 @@ TOPICS=(
     /scan /scan_raw
     # Odometry: fused, wheels, ZED (compare them in a Foxglove plot)
     /odometry/filtered /diff_drive_controller/odom /zed/zed_node/odom
+    # ZED tracking state: shows when VIO lost tracking (issue #26)
+    /zed/zed_node/pose/status
     # Commands at every stage: nav2 -> twist_mux -> controller, plus teleop
     /cmd_vel_nav /cmd_vel_joy /cmd_vel_key /diff_drive_controller/cmd_vel_unstamped
     # Plans and controller internals
@@ -75,7 +77,8 @@ TOPICS=(
     # Logs and health
     /rosout /diagnostics
 )
-$CAMERA && TOPICS+=(/zed/zed_node/rgb/image_rect_color/compressed /zed/zed_node/rgb/camera_info)
+# zed_wrapper 5.x topic names (4.x used rgb/image_rect_color)
+$CAMERA && TOPICS+=(/zed/zed_node/rgb/color/rect/image/compressed /zed/zed_node/rgb/color/rect/camera_info)
 $CLOUD && TOPICS+=(/zed/zed_node/point_cloud/cloud_registered)
 
 if $LIST; then
