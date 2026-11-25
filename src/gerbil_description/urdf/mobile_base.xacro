@@ -124,22 +124,6 @@
          gerbil_bringup/config/gerbil_controllers.yaml. -->
     <xacro:property name="wheel_separation" value="0.44" />
 
-    <!-- DRIVE MOTOR LIMITS, applied to the wheel joints ONLY under use_sim, so
-         the real URDF is unchanged. goBILDA 5304 Yellow Jacket, 99.5to1 -
-         60 rpm no-load at 12 V and about 9.2 N m stall torque, per the
-         goBILDA product page. CHECK both against the datasheet. The speed cap
-         is the one that matters for Nav2, 6.28 rad/s is 0.30 m/s at the
-         wheel, right at the controller's 0.3 m/s limit, so the sim cannot
-         drive faster than the real motors. The torque cap rarely binds, the
-         tyres slip on the floor long before 9 N m. -->
-    <xacro:property name="wheel_noload_speed" value="${60.0 * 2.0 * pi / 60.0}" />
-    <xacro:property name="wheel_stall_torque" value="9.2" />
-    <xacro:macro name="sim_wheel_limit">
-        <xacro:if value="${'$(arg use_sim)' in ('true', 'True', '1')}">
-            <limit effort="${wheel_stall_torque}" velocity="${wheel_noload_speed}" />
-        </xacro:if>
-    </xacro:macro>
-
     <!-- Wheel X position - near front edge of chassis -->
     <!-- Zero by definition now - base_link IS the axle midpoint. Kept as a
          named property so the wheel, rail and motor joints below still read
@@ -424,7 +408,6 @@
         <child link="right_wheel_link" />
         <origin xyz="${wheel_x_offset} ${-wheel_separation / 2.0} 0" rpy="0 0 0" />
         <axis xyz="0 1 0" />
-        <xacro:sim_wheel_limit />
     </joint>
 
     <joint name="base_left_wheel_joint" type="continuous">
@@ -432,7 +415,6 @@
         <child link="left_wheel_link" />
         <origin xyz="${wheel_x_offset} ${wheel_separation / 2.0} 0" rpy="0 0 0" />
         <axis xyz="0 1 0" />
-        <xacro:sim_wheel_limit />
     </joint>
 
     <!-- Caster, trailing at the rear (-X), 2 in in from the rear edge.
