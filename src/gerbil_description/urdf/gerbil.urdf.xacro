@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <robot name="gerbil" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+    <!-- Declared here, before the includes, because mobile_base.xacro reads it
+         too. It is also declared in mobile_base.ros2_control.xacro, which is
+         harmless, the first declaration wins. -->
+    <xacro:arg name="use_sim" default="false" />
+
     <xacro:include filename="common_properties.xacro" />
     <xacro:include filename="mobile_base.xacro" />
     <xacro:include filename="mobile_base.ros2_control.xacro" />
