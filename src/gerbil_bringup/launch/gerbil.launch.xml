@@ -24,9 +24,9 @@
     <arg name="use_joystick" default="false" description="bring up the pad in this launch (publishes to /cmd_vel_joy)" />
 
     <!-- ==================== SIMULATION ARGS ==================== -->
-    <!-- These exist so gerbil_gazebo/sim.launch.py runs THIS file rather than
-         a fork of it. Defaults are the real robot, so a launch that does not
-         mention them is unchanged. See gerbil_gazebo/README.md.
+    <!-- These exist so the simulator (oracle-software, sim.launch.py) runs THIS
+         file rather than a fork of it. Defaults are the real robot, so a launch that does not
+         mention them is unchanged. See oracle_sim/README.md in oracle-software.
          use_sim true means, all at once - every node follows /clock, xacro
          builds the Gazebo variant (ign_ros2_control plus sensor plugins),
          ros2_control_node is NOT started because the Gazebo plugin is the

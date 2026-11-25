@@ -12,8 +12,8 @@ Send a 3 m goal:
     "{header: {frame_id: 'odom'}, pose: {position: {x: 3.0}, orientation: {w: 1.0}}}"
 
 The sim-only arguments (use_sim, use_sim_depth, use_controllers) all default
-to the real robot. gerbil_gazebo/launch/sim.launch.py is the only thing that
-should change them; see gerbil_gazebo/README.md.
+to the real robot. The simulator (oracle-software, oracle_sim/launch/sim.launch.py)
+is the only thing that should change them; see oracle_sim/README.md there.
 """
 
 from launch import LaunchDescription

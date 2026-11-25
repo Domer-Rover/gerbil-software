@@ -1,6 +1,7 @@
 services:
-  # For simulation (Gazebo Fortress on Apple Silicon or x86), use gerbil-sim below.
-  # ros-dev is the older general dev desktop; it shares port 6080, so run one at a time.
+  # For simulation (Gazebo Fortress on Apple Silicon or x86), use the oracle-sim
+  # container in Domer-Rover/oracle-software. It mounts this repo's src/ and runs
+  # these exact configs. ros-dev shares port 6080 with it; run one at a time.
   ros-dev:
     build:
       context: .
@@ -30,28 +31,3 @@ services:
       - /dev/video0:/dev/video0
       - /dev/i2c-1:/dev/i2c-1
     command: /bin/bash -c "tail -f /dev/null"
-
-  gerbil-sim:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.sim
-    image: gerbil-sim:humble
-    container_name: gerbil-sim
-    ports:
-      - "6080:80"      # noVNC desktop: http://localhost:6080 (password: ubuntu)
-      - "8765:8765"    # foxglove_bridge
-    shm_size: '2g'
-    security_opt:
-      - seccomp:unconfined   # required by the Jammy-based VNC image
-    volumes:
-      - ./src:/home/ubuntu/ros2_ws/src
-      # colcon output lives in named volumes: persists across restarts and avoids
-      # slow macOS bind mounts. Wipe with `docker compose down -v` after image changes.
-      - gerbil-sim-build:/home/ubuntu/ros2_ws/build
-      - gerbil-sim-install:/home/ubuntu/ros2_ws/install
-      - gerbil-sim-log:/home/ubuntu/ros2_ws/log
-
-volumes:
-  gerbil-sim-build:
-  gerbil-sim-install:
-  gerbil-sim-log:

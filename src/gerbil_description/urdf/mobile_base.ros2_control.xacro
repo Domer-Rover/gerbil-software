@@ -13,7 +13,7 @@
     <xacro:arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <!-- use_sim false = real or mock hardware as selected above. true = the
          ign_ros2_control plugin drives the joints inside Gazebo Fortress, and
-         use_mock_hardware is ignored. See gerbil_gazebo/README.md. -->
+         use_mock_hardware is ignored. See oracle_sim/README.md in oracle-software. -->
     <xacro:arg name="use_sim" default="false" />
     <xacro:property name="sim_gazebo" value="${'$(arg use_sim)' in ('true', 'True', '1')}" />
 

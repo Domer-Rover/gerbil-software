@@ -3,7 +3,8 @@
 
     <!-- GAZEBO FORTRESS EXTENSIONS. Included by gerbil.urdf.xacro only when
          use_sim is true, so the real robot never sees any of this. The
-         interface contract (topic names, frames) is gerbil_gazebo/README.md.
+         interface contract (topic names, frames) is oracle_sim/README.md in the
+         oracle-software repo. config/gazebo_bridge.yaml must mirror the sensors here.
          Same comment rules as mobile_base.xacro - no colon followed by a
          space, no colon at the end of a line, no hash character, no double
          hyphen. They apply to the element text too, because the plugin

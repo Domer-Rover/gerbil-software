@@ -1,8 +1,10 @@
-# ros_gz_bridge parameter_bridge config for Gerbil in Gazebo Fortress.
-# Loaded by launch/sim.launch.py as the bridge node's config_file parameter.
+# Gazebo -> ROS topics for GERBIL's simulated sensors. Lives here, next to
+# urdf/gerbil.gazebo.xacro, because it mirrors exactly the sensors that file
+# declares: change one, change the other. The simulator (oracle-software,
+# oracle_sim/launch/sim.launch.py) loads it through its config/robots.yaml and
+# bridges /clock itself, so /clock is not listed here.
 #
-# Topic names and types are fixed by the contract in ../README.md. Every
-# entry is GZ_TO_ROS: the robot is driven through ign_ros2_control, so
+# Every entry is GZ_TO_ROS: the robot is driven through ign_ros2_control, so
 # nothing has to cross the other way.
 #
 # Gazebo's own TF topics (e.g. /model/gerbil/tf) are NEVER bridged. The EKF
@@ -13,15 +15,8 @@
 # spelling arrived with Garden). Keys verified against ros_gz_bridge
 # 0.244.27 for Humble.
 #
-# The optional depth cloud lives in bridge_depth_camera.yaml so that, with
+# The optional depth cloud lives in gazebo_bridge_depth.yaml so that, with
 # use_sim_depth:=false, nothing subscribes to a gz topic that does not exist.
-
-# Sim time. Every node runs with use_sim_time:=true and follows this.
-- ros_topic_name: /clock
-  gz_topic_name: /clock
-  ros_type_name: rosgraph_msgs/msg/Clock
-  gz_type_name: ignition.msgs.Clock
-  direction: GZ_TO_ROS
 
 # Simulated LD19. Same name and frame (laser_frame) as the real driver, so
 # the unchanged laser_filters chain turns it into /scan.
@@ -32,7 +27,7 @@
   direction: GZ_TO_ROS
 
 # ZED visual odometry stand-in. Bridged to /sim/zed_odom_raw, NOT straight to
-# /zed/zed_node/odom: scripts/zed_odom_sim_relay.py republishes it there after
+# /zed/zed_node/odom: oracle_sim's zed_odom_sim_relay.py republishes it there after
 # dropping the one physically impossible sample Gazebo emits at spawn (a
 # -333 m/s spike in school_loop that teleported the EKF 13 m). See that script.
 - ros_topic_name: /sim/zed_odom_raw
@@ -41,7 +36,7 @@
   gz_type_name: ignition.msgs.Odometry
   direction: GZ_TO_ROS
 
-# True pose, for evaluation ONLY (scripts/odom_error.py, RViz). Never fuse it.
+# True pose, for evaluation ONLY (oracle_sim's odom_error.py, RViz). Never fuse it.
 - ros_topic_name: /sim/ground_truth/odom
   gz_topic_name: /sim/ground_truth/odom
   ros_type_name: nav_msgs/msg/Odometry

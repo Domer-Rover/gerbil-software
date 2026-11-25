@@ -1,36 +1,14 @@
 # Docker Images
 
-## Dockerfile.sim (gerbil-sim): recommended for simulation
-ROS 2 Humble and Gazebo Fortress in a browser desktop (noVNC). Builds natively on Apple-Silicon
-Macs (arm64) and on x86, with no GPU needed: rendering uses Mesa llvmpipe.
-
-```bash
-docker compose build gerbil-sim
-docker compose up -d gerbil-sim          # stop ros-dev first: both use port 6080
-```
-
-1. Open http://localhost:6080 (VNC password: `ubuntu`).
-2. Open the **Gerbil Workspace** desktop icon (or any terminal) and run `gerbil-build`.
-3. Run `source ~/ros2_ws/install/setup.bash`. New terminals do this automatically.
-
-From the host, use `docker exec -it -u ubuntu gerbil-sim bash`. Run it as `ubuntu`, not root,
-so GUI apps can reach the VNC display.
-
-- `gerbil-build` runs `colcon build --symlink-install` as `ubuntu`, skipping the ZED, `gerbil_hw`,
-  `roboclaw_serial` and `ldlidar_stl_ros2` packages (list: `docker/sim/colcon_defaults.yaml`).
-  Extra arguments are passed to colcon, e.g. `gerbil-build --packages-select gerbil_gazebo`.
-- `build/`, `install/` and `log/` live in named volumes. After rebuilding the image, reset them with
-  `docker compose down -v`.
-- Foxglove Studio can connect to `ws://localhost:8765` once foxglove_bridge runs.
-- If the Gazebo GUI fails to create a GL context, try `MESA_GL_VERSION_OVERRIDE=4.5` or
-  `ign gazebo --render-engine ogre`. It is not set by default, because it only changes the
-  GL version Mesa reports, not what it can do.
-
-See [docs/simulation.md](../docs/simulation.md) for running the simulator itself: worlds, goals,
-obstacles, odometry grading, tuning exercises and troubleshooting.
+## Simulation: see oracle-software
+The Gazebo simulator lives in its own repo, **Domer-Rover/oracle-software**. Check it out next to
+this one; its `oracle-sim` container mounts this repo's `src/` and runs Gerbil's real URDF, EKF
+and Nav2 configs from it, so tuning stays here. What Gerbil provides for it: `use_sim`,
+`use_sim_depth` and `use_controllers` launch args, `gerbil_description/urdf/gerbil.gazebo.xacro`
+and `gerbil_description/config/gazebo_bridge*.yaml`.
 
 ## Dockerfile.dev
-Development environment with GUI support. For simulation, prefer gerbil-sim above.
+Development environment with GUI support. For simulation, use oracle-software instead.
 
 Features:
 - Ubuntu desktop via noVNC (http://localhost:6080)
