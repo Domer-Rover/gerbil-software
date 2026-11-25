@@ -60,7 +60,7 @@ colcon build --symlink-install && source install/setup.bash
 ros2 launch gerbil_bringup gerbil_foxglove.launch.py use_joystick:=true
 ```
 
-Connect Foxglove to `ws://<jetson>:8765`, or skip the live stream and record the run for replay: `ros2 run gerbil_bringup record_run.sh -n <name>` writes `~/bags/<date>_<name>/` (see `--help`). See [Build and run](docs/build-and-run.md) for the other launch files, the closed-loop encoder procedure, and checks.
+Connect Foxglove to `ws://<jetson>:8765`, or skip the live stream and record the run for replay: `scripts/record_run.sh -n <name>` writes `~/bags/<date>_<name>/` (see `--help`). See [Build and run](docs/build-and-run.md) for the other launch files, the closed-loop encoder procedure, and checks.
 
 No robot to hand? Run Gerbil in Gazebo on your laptop with [oracle-software](https://github.com/Domer-Rover/oracle-software), which mounts this repo and runs its real configs.
 

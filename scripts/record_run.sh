@@ -2,10 +2,10 @@
 # Record a Nav2 run on Gerbil for replay in Foxglove, instead of streaming it
 # live through foxglove_bridge (which costs ~0.7 of a Jetson core).
 #
-#   ros2 run gerbil_bringup record_run.sh                  # nav topics, until Ctrl-C
-#   ros2 run gerbil_bringup record_run.sh -n box_offset    # name the run
-#   ros2 run gerbil_bringup record_run.sh -d 120 --camera  # 2 min, plus compressed RGB
-#   ros2 run gerbil_bringup record_run.sh --list           # print the topics and exit
+#   scripts/record_run.sh                  # nav topics, until Ctrl-C
+#   scripts/record_run.sh -n box_offset    # name the run
+#   scripts/record_run.sh -d 120 --camera  # 2 min, plus compressed RGB
+#   scripts/record_run.sh --list           # print the topics and exit
 #
 # Output: ~/bags/<YYYY-mm-dd_HHMMSS>_<name>/ as MCAP, which Foxglove opens
 # directly (File > Open local file). Copy it off with

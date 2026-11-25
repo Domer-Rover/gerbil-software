@@ -2,7 +2,7 @@
 
 ## Simulation: see oracle-software
 The Gazebo simulator lives in its own repo, **Domer-Rover/oracle-software**. Check it out next to
-this one; its `oracle-sim` container mounts this repo's `src/` and runs Gerbil's real URDF, EKF
+this one; its `oracle-sim` container mounts this whole repo (scripts included) and runs Gerbil's real URDF, EKF
 and Nav2 configs from it, so tuning stays here. What Gerbil provides for it: `use_sim`,
 `use_sim_depth` and `use_controllers` launch args, `gerbil_description/urdf/gerbil.gazebo.xacro`
 and `gerbil_description/config/gazebo_bridge*.yaml`.

@@ -16,20 +16,8 @@ install(
   DESTINATION share/${PROJECT_NAME}/
 )
 
-install(
-  PROGRAMS
-    scripts/aruco_detector.py
-    scripts/teleop_keyboard.sh
-    scripts/teleop_joystick.sh
-    scripts/record_run.sh
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-# teleop_common.sh is sourced by the two teleop scripts, never run directly,
-# so it installs as data rather than as a program.
-install(
-  FILES scripts/teleop_common.sh
-  DESTINATION lib/${PROJECT_NAME}
-)
+# No scripts are installed. Teleop, recording, map saving and the ArUco
+# nodes live in the repo's top-level scripts/ and run straight from there,
+# e.g. ~/gerbil-software/scripts/teleop_keyboard.sh. No rebuild needed.
 
 ament_package()
