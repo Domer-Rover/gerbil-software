@@ -19,15 +19,18 @@ slam_toolbox:
     # Process near changes only (good for slow robots)
     map_update_interval: 3.0          # update map more frequently
     resolution: 0.05
-    max_laser_range: 5.0               # ZED depth is unreliable past ~5m
+    # The scan is the LD19 (/scan after laser_filter), not ZED depth. 8 m is
+    # the same usable range both Nav2 costmaps take from it (obstacle_max_range);
+    # the LD19 is rated to 12 m but far returns drop out more often. Was 5.0
+    # with a stale "ZED depth" justification, which cut a 2.44 m wide loop's
+    # long walls short when mapping it.
+    max_laser_range: 8.0
     minimum_time_interval: 0.5
-    transform_timeout: 0.5             # more tolerance for ZED VO latency
+    transform_timeout: 0.5             # odom -> base_footprint comes from the EKF
     tf_buffer_duration: 30.0
 
-    # Map size constraints (metres) — ~5yd x 5yd space + margin
-    # Map will be centred on the robot's start position
-    map_size_x: 8.0
-    map_size_y: 8.0
+    # (map_size_x / map_size_y were here; they are not slam_toolbox
+    # parameters and were silently ignored. The map grows as needed.)
 
     # Throttle (Jetson Nano friendly)
     throttle_scans: 1
@@ -36,8 +39,8 @@ slam_toolbox:
     # Correlation search (how far to search for loop closures)
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_travel_distance: 0.15      # denser scans for narrow FOV depth camera
-    minimum_travel_heading: 0.2        # capture more heading changes with limited FOV
+    minimum_travel_distance: 0.15      # take a scan every 15 cm
+    minimum_travel_heading: 0.2        # or every ~11 deg of turn (the scan is cropped to the front 180)
 
     # Correlation search parameters
     correlation_search_space_dimension: 0.5

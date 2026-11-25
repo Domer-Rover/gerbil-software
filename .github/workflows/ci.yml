@@ -3,7 +3,7 @@
 # This file is intentionally IDENTICAL in capybara-software and
 # gerbil-software except for the ROBOT value below. Both repos use the same
 # layout (src/<robot>_bringup, src/<robot>_description, src/<robot>_hw,
-# src/imu_package, src/vendors/*), so every path is derived from $ROBOT.
+# src/<robot>_imu, src/vendors/*), so every path is derived from $ROBOT.
 # Keep it that way: fix CI in one repo, copy the file to the other.
 name: ci
 
@@ -67,7 +67,7 @@ jobs:
             src/${ROBOT}_bringup \
             src/${ROBOT}_description \
             src/${ROBOT}_hw \
-            src/imu_package \
+            src/${ROBOT}_imu \
             src/vendors/ldlidar_stl_ros2 \
             src/vendors/roboclaw_serial
 

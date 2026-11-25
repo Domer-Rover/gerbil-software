@@ -25,7 +25,7 @@ pip3 install pyserial
 
 ```bash
 cd ~/ros2_ws
-colcon build --packages-select imu_package
+colcon build --packages-select gerbil_imu
 source install/setup.bash
 ```
 
@@ -33,17 +33,17 @@ source install/setup.bash
 
 ### Launch the IMU node:
 ```bash
-ros2 launch imu_package bno055_imu.launch.py
+ros2 launch gerbil_imu bno055_imu.launch.py
 ```
 
 Or with custom serial port:
 ```bash
-ros2 launch imu_package bno055_imu.launch.py serial_port:=/dev/ttyUSB0
+ros2 launch gerbil_imu bno055_imu.launch.py serial_port:=/dev/ttyUSB0
 ```
 
 ### Run the test subscriber:
 ```bash
-ros2 run imu_package imu_test_sub
+ros2 run gerbil_imu imu_test_sub
 ```
 
 ### View topics:
