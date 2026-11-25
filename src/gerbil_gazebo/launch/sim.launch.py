@@ -147,7 +147,17 @@ def _launch_setup(context, *args, **kwargs):
         }.items(),
     )))
 
-    # ---------------- 2a. Bridge ----------------
+    # ---------------- 2a. ZED stand-in relay ----------------
+    # Drops the spawn-time velocity spike before the EKF can see it.
+    actions.append(Node(
+        package='gerbil_gazebo',
+        executable='zed_odom_sim_relay.py',
+        name='zed_odom_sim_relay',
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+    ))
+
+    # ---------------- 2b. Bridge ----------------
     actions.append(Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -170,7 +180,7 @@ def _launch_setup(context, *args, **kwargs):
             output='screen',
         ))
 
-    # ---------------- 2b. The REAL bringup, sim args flipped ----------------
+    # ---------------- 2c. The REAL bringup, sim args flipped ----------------
     # robot_state_publisher runs exactly once, inside this include, and is the
     # only source of /robot_description (which `create` spawns from and the
     # ign_ros2_control plugin reads).

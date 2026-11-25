@@ -170,9 +170,16 @@ controller_server:
       # here: the shim block above sets them, and a duplicate YAML key in the
       # same namespace silently keeps only the last one.
       desired_linear_vel: 0.25         # indoor; small robot
-      lookahead_dist: 0.4
-      min_lookahead_dist: 0.2
-      max_lookahead_dist: 0.6
+      # min_lookahead_dist MUST stay above xy_goal_tolerance (0.5). Humble's
+      # RPP decides "at the goal, rotate to goal heading" by measuring the
+      # distance to the LOOKAHEAD POINT, not to the goal. At standstill the
+      # velocity-scaled lookahead collapses to min_lookahead_dist, so with the
+      # old 0.2 < 0.5 every goal started in "arrived" mode - zero linear
+      # velocity, rotate in place forever, Failed to make progress, recovery.
+      # Found in Gazebo 2026-11-25 before any goal had been sent on hardware.
+      lookahead_dist: 0.6
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 0.9
       lookahead_time: 1.5
       transform_tolerance: 0.3
       use_velocity_scaled_lookahead_dist: true

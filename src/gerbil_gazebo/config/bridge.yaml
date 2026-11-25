@@ -31,8 +31,11 @@
   gz_type_name: ignition.msgs.LaserScan
   direction: GZ_TO_ROS
 
-# ZED visual odometry stand-in, fused by the EKF exactly like the real one.
-- ros_topic_name: /zed/zed_node/odom
+# ZED visual odometry stand-in. Bridged to /sim/zed_odom_raw, NOT straight to
+# /zed/zed_node/odom: scripts/zed_odom_sim_relay.py republishes it there after
+# dropping the one physically impossible sample Gazebo emits at spawn (a
+# -333 m/s spike in school_loop that teleported the EKF 13 m). See that script.
+- ros_topic_name: /sim/zed_odom_raw
   gz_topic_name: /zed/zed_node/odom
   ros_type_name: nav_msgs/msg/Odometry
   gz_type_name: ignition.msgs.Odometry

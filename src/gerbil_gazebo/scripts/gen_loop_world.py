@@ -204,6 +204,10 @@ def build(args):
     w('      <max_step_size>%s</max_step_size>' % f(step))
     w('      <real_time_factor>1.0</real_time_factor>')
     w('      <real_time_update_rate>%d</real_time_update_rate>' % int(round(1.0 / step)))
+    # DART's default FCL collision checker gives a cylinder resting on a plane
+    # one unstable contact point, and Gerbil's wheels slipped ~87 percent
+    # (wheel odom 0.20 m/s, true 0.025 m/s). ODE's checker handles it.
+    w('      <dart><collision_detector>ode</collision_detector></dart>')
     w('    </physics>')
     w('')
     w('    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>')
