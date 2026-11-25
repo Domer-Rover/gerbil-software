@@ -521,6 +521,7 @@ performance issue.
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
+| First launch in a fresh container: RViz shows **ROS Time 0.00**, nothing moves | Gazebo is still compiling its shaders on the CPU (llvmpipe). Seen once on a new container, never on later launches | Wait 1-2 minutes. If it is still 0.00 after that, Ctrl-C and relaunch; the second launch starts normally |
 | Gazebo window is black or fails to create a GL context | ogre2 cannot get a GL context from llvmpipe | Per `docker/README.md`: try `MESA_GL_VERSION_OVERRIDE=4.5 ros2 launch ...`, or the old render engine for the GUI with `gz_args:="--render-engine ogre"`. Or run `use_gui:=false` and use RViz |
 | `diff_drive_controller` never reaches active, spawner errors | The spawners wait up to 120 s for `/controller_manager`, which exists only after the robot is spawned | Check `[gerbil sim] gerbil spawned` printed. If spawning failed, the launch shuts itself down with a message. Rerun with `gz_args:="-v 4"` and look for `ign_ros2_control` errors. Check with `ros2 control list_controllers` |
 | No `/scan` | Bridge or laser_filters chain | `ros2 topic hz /scan_raw` (bridge, from the gpu_lidar). If that is fine, `ros2 topic hz /scan` (laser_filters). No `/scan_raw` usually means the sensors did not render: see the black-window row |
