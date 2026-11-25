@@ -5,8 +5,8 @@
     <xacro:include filename="mobile_base.xacro" />
     <xacro:include filename="mobile_base.ros2_control.xacro" />
 
-    <!-- Gazebo plugins, sensors and friction. Only for sim_mode gazebo. -->
-    <xacro:if value="${'$(arg sim_mode)' == 'gazebo'}">
+    <!-- Gazebo plugins, sensors and friction. Only when use_sim is true. -->
+    <xacro:if value="${'$(arg use_sim)' in ('true', 'True', '1')}">
         <xacro:include filename="gerbil.gazebo.xacro" />
     </xacro:if>
 

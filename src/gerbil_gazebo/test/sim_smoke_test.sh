@@ -73,14 +73,14 @@ if ! ros2 pkg prefix gerbil_gazebo >/dev/null 2>&1; then
     ros2 pkg prefix gerbil_gazebo >/dev/null 2>&1 || fail "gerbil_gazebo still not found after sourcing $WS/install/setup.bash"
 fi
 log "workspace $WS, world $WORLD, ROS_DOMAIN_ID $ROS_DOMAIN_ID, IGN_PARTITION $IGN_PARTITION"
-log "headless_rendering:=$HEADLESS_RENDERING, logs in $LOG_DIR"
+log "use_headless:=$HEADLESS_RENDERING, logs in $LOG_DIR"
 
 # ---------------------------------------------------------------- launch
 # setsid puts the launch and everything it starts (ign gazebo included) in one
 # process group, so cleanup can signal all of it at once.
 setsid ros2 launch gerbil_gazebo sim.launch.py \
-    world:="$WORLD" gui:=false rviz:=false foxglove:=false \
-    headless_rendering:="$HEADLESS_RENDERING" odom_error:=true \
+    world:="$WORLD" use_gui:=false use_rviz:=false use_foxglove:=false \
+    use_headless:="$HEADLESS_RENDERING" use_odom_error:=true \
     >"$LAUNCH_LOG" 2>&1 < /dev/null &
 LAUNCH_PID=$!
 LAUNCH_PGID=$(ps -o pgid= -p "$LAUNCH_PID" 2>/dev/null | tr -d ' ')

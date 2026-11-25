@@ -14,7 +14,7 @@
 # 0.244.27 for Humble.
 #
 # The optional depth cloud lives in bridge_depth_camera.yaml so that, with
-# depth_camera:=false, nothing subscribes to a gz topic that does not exist.
+# use_sim_depth:=false, nothing subscribes to a gz topic that does not exist.
 
 # Sim time. Every node runs with use_sim_time:=true and follows this.
 - ros_topic_name: /clock

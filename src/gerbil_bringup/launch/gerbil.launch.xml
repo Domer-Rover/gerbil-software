@@ -10,10 +10,10 @@
     <arg name="serial_port" default="/dev/gerbil_roboclaw" />
     <arg name="lidar_port" default="/dev/gerbil_lidar" />  <!-- needs udev/99-gerbil.rules installed -->
     <arg name="use_twist_mux" default="true" description="arbitrate joystick / keyboard / nav2. Needs ros-humble-twist-mux. Turn OFF only to drive a single source straight into the controller." />
-    <arg name="launch_lidar" default="true" />
-    <arg name="launch_gps" default="false" />
-    <arg name="launch_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
-    <arg name="launch_zed" default="true" />
+    <arg name="use_lidar" default="true" />
+    <arg name="use_gps" default="false" />
+    <arg name="use_rviz" default="false" />  <!-- needs a display; off for headless SSH -->
+    <arg name="use_zed" default="true" />
     <!-- Start joy_node and teleop_twist_joy in this launch, the way Capybara
          does, so one command brings up the robot and the pad. Default false so
          a bare launch is unchanged and nothing grabs the joystick device
@@ -24,29 +24,20 @@
     <arg name="use_joystick" default="false" description="bring up the pad in this launch (publishes to /cmd_vel_joy)" />
 
     <!-- ==================== SIMULATION ARGS ==================== -->
-    <!-- Everything below exists so gerbil_gazebo/sim.launch.py can run THIS
-         file instead of a fork of it. Every default is the real robot, so a
-         launch that does not mention them is unchanged. See
-         gerbil_gazebo/README.md for the contract. -->
-    <!-- Handed to every node we start. true only under Gazebo, where /clock
-         comes from the bridge. -->
-    <arg name="use_sim_time" default="false" description="true = follow /clock (Gazebo). Real robot: false" />
-    <!-- Passed straight to xacro. none = real or mock hardware, as before.
-         gazebo = ign_ros2_control plus the sensor plugins. -->
-    <arg name="sim_mode" default="none" description="xacro sim_mode: none (real or mock hardware) or gazebo" />
-    <arg name="sim_depth_camera" default="false" description="xacro sim_depth_camera: add the simulated ZED depth cloud (sim_mode gazebo only)" />
-    <!-- In Gazebo the controller_manager lives INSIDE the ign_ros2_control
-         plugin, so a second one from ros2_control_node would fight it for the
-         same /controller_manager name and own no hardware. -->
-    <arg name="launch_ros2_control_node" default="true" description="false under Gazebo, where the ign_ros2_control plugin is the controller_manager" />
-    <!-- The sim launch starts the spawners itself, and only once the robot
-         exists in Gazebo, because the plugin's controller_manager does not
-         exist before then. -->
-    <arg name="launch_spawners" default="true" description="spawn joint_state_broadcaster and diff_drive_controller here" />
-    <!-- launch_lidar gates the whole LIDAR chain. launch_lidar_driver gates
-         only the LD19 driver, so the laser_filters chain can still turn a
-         simulated /scan_raw into /scan. -->
-    <arg name="launch_lidar_driver" default="true" description="start the LD19 driver. false = /scan_raw comes from elsewhere (Gazebo bridge, a bag)" />
+    <!-- These exist so gerbil_gazebo/sim.launch.py runs THIS file rather than
+         a fork of it. Defaults are the real robot, so a launch that does not
+         mention them is unchanged. See gerbil_gazebo/README.md.
+         use_sim true means, all at once - every node follows /clock, xacro
+         builds the Gazebo variant (ign_ros2_control plus sensor plugins),
+         ros2_control_node is NOT started because the Gazebo plugin is the
+         controller_manager, the LD19 driver is NOT started because the bridge
+         publishes /scan_raw (the laser filter still runs), and the ZED is NOT
+         started because the container has no ZED SDK. -->
+    <arg name="use_sim" default="false" description="run under Gazebo instead of on hardware" />
+    <arg name="use_sim_depth" default="false" description="add the simulated ZED depth cloud (use_sim only)" />
+    <!-- The sim launch turns this off and starts the spawners itself, once
+         the robot exists in Gazebo and so does its controller_manager. -->
+    <arg name="use_controllers" default="true" description="spawn joint_state_broadcaster and diff_drive_controller" />
 
     <!-- ==================== PATHS ==================== -->
     <let name="urdf_path"
@@ -54,11 +45,11 @@
     <let name="rviz_config_path"
          value="$(find-pkg-share gerbil_description)/rviz/urdf_config.rviz" />
     <!-- One xacro command line, shared by robot_state_publisher and
-         ros2_control_node so the two can never disagree. With sim_mode none
-         and sim_depth_camera false (the xacro defaults) the generated URDF
-         is byte for byte what it was before these args existed. -->
+         ros2_control_node so the two can never disagree. With use_sim and
+         use_sim_depth false (the xacro defaults) the generated URDF is byte
+         for byte what it was before these args existed. -->
     <let name="xacro_cmd"
-         value="xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port) sim_mode:=$(var sim_mode) sim_depth_camera:=$(var sim_depth_camera)" />
+         value="xacro $(var urdf_path) use_mock_hardware:=$(var use_mock_hardware) use_duty_cycle:=$(var use_duty_cycle) serial_port:=$(var serial_port) use_sim:=$(var use_sim) use_sim_depth:=$(var use_sim_depth)" />
 
     <!-- ==================== ROBOT STATE PUBLISHER ==================== -->
     <!-- Keep the default node name robot_state_publisher. Under Gazebo the
@@ -73,11 +64,11 @@
              rules". type="str" passes the URDF through verbatim. -->
         <param name="robot_description" type="str"
                value="$(command '$(var xacro_cmd)')" />
-        <param name="use_sim_time" value="$(var use_sim_time)" />
+        <param name="use_sim_time" value="$(var use_sim)" />
     </node>
 
     <!-- ==================== ROS2 CONTROL ==================== -->
-    <group if="$(var launch_ros2_control_node)">
+    <group unless="$(var use_sim)">
         <node pkg="controller_manager" exec="ros2_control_node" output="screen">
             <!-- type="str" is REQUIRED. Without it launch parses this value with
                  YAML rules, and xacro copies XML comments through into the
@@ -88,29 +79,23 @@
             <param name="robot_description" type="str"
                    value="$(command '$(var xacro_cmd)')" />
             <param from="$(find-pkg-share gerbil_bringup)/config/gerbil_controllers.yaml" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
         </node>
     </group>
 
     <!-- Spawners for controllers. Left on wall time on purpose: they only
          wait on services, and a spawner on sim time would stall if /clock
          were late. -->
-    <group if="$(var launch_spawners)">
+    <group if="$(var use_controllers)">
         <node pkg="controller_manager" exec="spawner" args="joint_state_broadcaster" />
         <node pkg="controller_manager" exec="spawner" args="diff_drive_controller" />
     </group>
 
     <!-- ==================== ZED2i CAMERA ==================== -->
-    <group if="$(var launch_zed)">
+    <!-- Never under Gazebo, there is no ZED SDK in the sim container. -->
+    <group if="$(var use_zed)">
+    <group unless="$(var use_sim)">
         <include file="$(find-pkg-share zed_wrapper)/launch/zed_camera.launch.py">
-            <!-- sim_mode and use_sim_time MUST be passed explicitly. Launch
-                 configurations leak into an include, and the ZED launch
-                 declares its own sim_mode (ZED SDK simulator input) with
-                 choices true or false only. Without this line it inherits
-                 OUR sim_mode, the value none is rejected, and the real
-                 robot fails to launch. Theirs and ours are unrelated. -->
-            <arg name="sim_mode" value="false" />
-            <arg name="use_sim_time" value="$(var use_sim_time)" />
             <arg name="camera_model" value="zed2i" />
             <arg name="publish_urdf" value="true" />
             <arg name="publish_tf" value="false" />  <!-- EKF owns odom -> base_footprint -->
@@ -124,39 +109,40 @@
                  value="$(find-pkg-share gerbil_bringup)/config/zed_override.yaml" />
         </include>
     </group>
+    </group>
 
     <!-- ==================== RVIZ ==================== -->
-    <group if="$(var launch_rviz)">
+    <group if="$(var use_rviz)">
         <node pkg="rviz2" exec="rviz2" output="screen"
               args="-d $(var rviz_config_path)">
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
         </node>
     </group>
     <!-- ==================== LIDAR (LD19) ==================== -->
     <!-- Driver publishes /scan_raw; laser_filters crops the robot body and
          the rear half, publishing /scan for Nav2. Under Gazebo the driver is
-         off (launch_lidar_driver false) and the bridge publishes /scan_raw
+         off (use_sim true) and the bridge publishes /scan_raw
          instead, so the SAME filter chain and bounds produce /scan. -->
-    <group if="$(var launch_lidar)">
-        <node if="$(var launch_lidar_driver)" pkg="ldlidar_stl_ros2" exec="ldlidar_stl_ros2_node" name="ldlidar_node" output="screen">
+    <group if="$(var use_lidar)">
+        <node unless="$(var use_sim)" pkg="ldlidar_stl_ros2" exec="ldlidar_stl_ros2_node" name="ldlidar_node" output="screen">
             <param name="product_name" value="LDLiDAR_LD06" />
             <param name="topic_name" value="scan_raw" />
             <param name="port_name" value="$(var lidar_port)" />
             <param name="port_baudrate" value="230400" />
             <param name="laser_scan_dir" value="true" />
             <param name="frame_id" value="laser_frame" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
         </node>
         <node pkg="laser_filters" exec="scan_to_scan_filter_chain" output="screen">
             <param from="$(find-pkg-share gerbil_bringup)/config/laser_filter.yaml" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
             <remap from="scan" to="scan_raw" />
             <remap from="scan_filtered" to="scan" />
         </node>
     </group>
 
     <!-- ==================== GPS (u-blox) ==================== -->
-    <group if="$(var launch_gps)">
+    <group if="$(var use_gps)">
         <node pkg="ublox_gps" exec="ublox_gps_node" name="gps" output="screen">
             <param name="device" value="/dev/gerbil_gps" />
             <param name="frame_id" value="gps" />
@@ -164,14 +150,14 @@
             <param name="publish.nav.posllh" value="true" />
             <param name="publish.nav.status" value="true" />
             <param name="publish.nav.pvt" value="true" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
         </node>
     </group>
 
     <!-- ==================== EKF (odom -> base_footprint) ==================== -->
     <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node" output="screen">
         <param from="$(find-pkg-share gerbil_bringup)/config/ekf.yaml" />
-        <param name="use_sim_time" value="$(var use_sim_time)" />
+        <param name="use_sim_time" value="$(var use_sim)" />
     </node>
 
     <!-- ==================== COMMAND ARBITRATION ==================== -->
@@ -184,7 +170,7 @@
     <group if="$(var use_twist_mux)">
         <node pkg="twist_mux" exec="twist_mux" name="twist_mux" output="screen">
             <param from="$(find-pkg-share gerbil_bringup)/config/twist_mux.yaml" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
             <remap from="cmd_vel_out" to="/diff_drive_controller/cmd_vel_unstamped" />
         </node>
     </group>
@@ -201,7 +187,7 @@
             <param name="device_id" value="0" />
             <param name="autorepeat_rate" value="20.0" />
             <param name="deadzone" value="0.05" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
         </node>
         <node pkg="teleop_twist_joy" exec="teleop_node" name="teleop_twist_joy" output="screen">
             <param name="enable_button" value="4" />
@@ -209,7 +195,7 @@
             <param name="scale_linear.x" value="0.3" />
             <param name="axis_angular.yaw" value="0" />
             <param name="scale_angular.yaw" value="1.0" />
-            <param name="use_sim_time" value="$(var use_sim_time)" />
+            <param name="use_sim_time" value="$(var use_sim)" />
             <remap from="cmd_vel" to="/cmd_vel_joy" />
         </node>
     </group>

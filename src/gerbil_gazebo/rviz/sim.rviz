@@ -140,7 +140,7 @@ Visualization Manager:
       Color Scheme: map
       Draw Behind: true
       Enabled: false
-      Name: SLAM map (slam:=true)
+      Name: SLAM map (use_slam:=true)
       Topic:
         Depth: 1
         Durability Policy: Transient Local
@@ -392,7 +392,7 @@ Visualization Manager:
       Color Transformer: AxisColor
       Decay Time: 0
       Enabled: false
-      Name: ZED depth (depth_camera:=true)
+      Name: ZED depth (use_sim_depth:=true)
       Position Transformer: XYZ
       Selectable: false
       Size (Pixels): 2

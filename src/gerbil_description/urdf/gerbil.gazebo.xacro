@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <!-- GAZEBO FORTRESS EXTENSIONS. Included by gerbil.urdf.xacro only when
-         sim_mode is gazebo, so the real robot never sees any of this. The
+         use_sim is true, so the real robot never sees any of this. The
          interface contract (topic names, frames) is gerbil_gazebo/README.md.
          Same comment rules as mobile_base.xacro - no colon followed by a
          space, no colon at the end of a line, no hash character, no double
@@ -32,7 +32,7 @@
                default="$(find gerbil_bringup)/config/gerbil_controllers.yaml" />
     <!-- Optional low-res depth camera standing in for the ZED depth. Off by
          default because rendering it under software GL costs real time. -->
-    <xacro:arg name="sim_depth_camera" default="false" />
+    <xacro:arg name="use_sim_depth" default="false" />
 
     <!-- ==================== ROS2 CONTROL ==================== -->
     <!-- ign_ros2_control (humble). The library and class names below are the
@@ -209,7 +209,7 @@
          x-forward, y-left, z-up, not optical, so zed_camera_link is the
          right frame id. 320x180 at 5 Hz keeps llvmpipe rendering cheap. The
          near clip of 0.3 m is the ZED2i minimum depth. -->
-    <xacro:if value="${'$(arg sim_depth_camera)' in ('true', 'True', '1')}">
+    <xacro:if value="${'$(arg use_sim_depth)' in ('true', 'True', '1')}">
         <gazebo reference="zed_camera_link">
             <sensor name="zed_depth" type="depth_camera">
                 <always_on>true</always_on>

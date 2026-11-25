@@ -3,7 +3,7 @@
 
 No map, no AMCL — goals are relative to wherever the robot booted. Obstacles
 come from the LD19 LIDAR on /scan (driver + laser_filters live in
-gerbil.launch.xml, launched here with launch_lidar:=true).
+gerbil.launch.xml, launched here with use_lidar:=true).
 
   ros2 launch gerbil_bringup gerbil_nav2.launch.py use_duty_cycle:=false
 
@@ -11,9 +11,8 @@ Send a 3 m goal:
   ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \\
     "{header: {frame_id: 'odom'}, pose: {position: {x: 3.0}, orientation: {w: 1.0}}}"
 
-The sim-only arguments (use_sim_time, sim_mode, sim_depth_camera,
-launch_ros2_control_node, launch_spawners, launch_lidar_driver) all default to
-the real robot. gerbil_gazebo/launch/sim.launch.py is the only thing that
+The sim-only arguments (use_sim, use_sim_depth, use_controllers) all default
+to the real robot. gerbil_gazebo/launch/sim.launch.py is the only thing that
 should change them; see gerbil_gazebo/README.md.
 """
 
@@ -31,21 +30,16 @@ from launch_ros.substitutions import FindPackageShare
 # today's real-robot value, so a launch that names none of them behaves
 # exactly as before. (name, default, description)
 _FORWARDED_ARGS = [
-    ('launch_zed', 'true', 'Launch the ZED2i wrapper. false under Gazebo'),
-    ('launch_lidar', 'true',
-     'Run the LIDAR chain: LD19 driver plus laser_filters (/scan_raw -> /scan)'),
-    ('launch_lidar_driver', 'true',
-     'Run the LD19 driver. false = /scan_raw comes from elsewhere (Gazebo '
-     'bridge, a bag) while laser_filters still produces /scan'),
-    ('use_sim_time', 'false', 'true = every node follows /clock (Gazebo)'),
-    ('sim_mode', 'none', 'xacro sim_mode: none (real or mock) or gazebo'),
-    ('sim_depth_camera', 'false',
-     'xacro sim_depth_camera (sim_mode gazebo only)'),
-    ('launch_ros2_control_node', 'true',
-     'false under Gazebo, where ign_ros2_control is the controller_manager'),
-    ('launch_spawners', 'true',
-     'Spawn the controllers in gerbil.launch.xml. The sim launch spawns them '
-     'itself once the robot exists'),
+    ('use_zed', 'true', 'Start the ZED2i wrapper (never under use_sim)'),
+    ('use_lidar', 'true',
+     'Start the LIDAR chain: LD19 driver plus laser_filters (/scan_raw -> /scan)'),
+    ('use_sim', 'false',
+     'Run under Gazebo: sim time, Gazebo URDF, no ros2_control_node, no LD19 '
+     'driver, no ZED'),
+    ('use_sim_depth', 'false', 'Add the simulated ZED depth cloud (use_sim only)'),
+    ('use_controllers', 'true',
+     'Spawn the controllers. The sim launch spawns them itself once the robot '
+     'exists'),
 ]
 
 
@@ -56,8 +50,8 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    launch_gps_arg = DeclareLaunchArgument(
-        'launch_gps',
+    use_gps_arg = DeclareLaunchArgument(
+        'use_gps',
         default_value='false',
         description='Launch the u-blox GPS node (publishes /fix)'
     )
@@ -86,8 +80,8 @@ def generate_launch_description():
         description='Foxglove WebSocket port'
     )
 
-    launch_foxglove_arg = DeclareLaunchArgument(
-        'launch_foxglove',
+    use_foxglove_arg = DeclareLaunchArgument(
+        'use_foxglove',
         default_value='true',
         description='Start foxglove_bridge with the stack'
     )
@@ -101,7 +95,7 @@ def generate_launch_description():
     # with value_type=bool makes it a real bool parameter, so a typo fails
     # loudly at launch instead of becoming a string parameter.
     use_sim_time = ParameterValue(
-        LaunchConfiguration('use_sim_time'), value_type=bool)
+        LaunchConfiguration('use_sim'), value_type=bool)
 
     gerbil_bringup_share = FindPackageShare('gerbil_bringup')
 
@@ -118,12 +112,12 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
-            'launch_rviz': 'false',
+            'use_rviz': 'false',
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
-            'launch_gps': LaunchConfiguration('launch_gps'),
+            'use_gps': LaunchConfiguration('use_gps'),
             'use_joystick': LaunchConfiguration('use_joystick'),
-            # launch_zed and launch_lidar used to be hard-coded 'true' here.
-            # They are arguments now, and their defaults are still 'true'.
+            # use_zed and use_lidar used to be hard-coded 'true' here. They
+            # are arguments now, and their defaults are still 'true'.
             **{name: LaunchConfiguration(name)
                for name, _, _ in _FORWARDED_ARGS},
         }.items()
@@ -140,7 +134,7 @@ def generate_launch_description():
             {'use_sim_time': use_sim_time},
         ],
         output='screen',
-        condition=IfCondition(LaunchConfiguration('launch_foxglove')),
+        condition=IfCondition(LaunchConfiguration('use_foxglove')),
     )
 
     # --- Nav2 (odom-only, no map/AMCL) ---
@@ -210,10 +204,10 @@ def generate_launch_description():
     return LaunchDescription([
         use_mock_hardware_arg,
         use_duty_cycle_arg,
-        launch_gps_arg,
+        use_gps_arg,
         use_joystick_arg,
         foxglove_port_arg,
-        launch_foxglove_arg,
+        use_foxglove_arg,
         *forwarded_args,
         # Robot base (controllers + ZED + LIDAR)
         capybara_launch,

@@ -11,11 +11,11 @@
          is real in both modes. Duty cycle does not mean open-loop odometry. -->
     <xacro:arg name="use_duty_cycle" default="true" />
     <xacro:arg name="serial_port" default="/dev/gerbil_roboclaw" />
-    <!-- sim_mode none = real or mock hardware as selected above. gazebo = the
+    <!-- use_sim false = real or mock hardware as selected above. true = the
          ign_ros2_control plugin drives the joints inside Gazebo Fortress, and
          use_mock_hardware is ignored. See gerbil_gazebo/README.md. -->
-    <xacro:arg name="sim_mode" default="none" />
-    <xacro:property name="sim_gazebo" value="${'$(arg sim_mode)' == 'gazebo'}" />
+    <xacro:arg name="use_sim" default="false" />
+    <xacro:property name="sim_gazebo" value="${'$(arg use_sim)' in ('true', 'True', '1')}" />
 
     <ros2_control name="GerbilRoboClawSystem" type="system">
         <!-- Mock hardware for simulation or testing without actual RoboClaw -->

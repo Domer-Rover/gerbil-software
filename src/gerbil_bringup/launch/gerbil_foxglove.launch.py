@@ -15,8 +15,8 @@ def generate_launch_description():
         description='Use mock hardware for simulation'
     )
 
-    launch_zed_arg = DeclareLaunchArgument(
-        'launch_zed',
+    use_zed_arg = DeclareLaunchArgument(
+        'use_zed',
         default_value='true',
         description='Launch ZED2i camera'
     )
@@ -27,13 +27,13 @@ def generate_launch_description():
         description='false = RoboClaw velocity PID (needs encoders + tuned PID)'
     )
 
-    launch_lidar_arg = DeclareLaunchArgument(
-        'launch_lidar',
+    use_lidar_arg = DeclareLaunchArgument(
+        'use_lidar',
         default_value='true',
     )
 
-    launch_gps_arg = DeclareLaunchArgument(
-        'launch_gps',
+    use_gps_arg = DeclareLaunchArgument(
+        'use_gps',
         default_value='false',
     )
 
@@ -55,11 +55,11 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'use_mock_hardware': LaunchConfiguration('use_mock_hardware'),
-            'launch_rviz': 'false',
-            'launch_zed': LaunchConfiguration('launch_zed'),
+            'use_rviz': 'false',
+            'use_zed': LaunchConfiguration('use_zed'),
             'use_duty_cycle': LaunchConfiguration('use_duty_cycle'),
-            'launch_gps': LaunchConfiguration('launch_gps'),
-            'launch_lidar': LaunchConfiguration('launch_lidar'),
+            'use_gps': LaunchConfiguration('use_gps'),
+            'use_lidar': LaunchConfiguration('use_lidar'),
         }.items()
     )
 
@@ -80,10 +80,10 @@ def generate_launch_description():
 
     return LaunchDescription([
         use_mock_hardware_arg,
-        launch_zed_arg,
+        use_zed_arg,
         use_duty_cycle_arg,
-        launch_lidar_arg,
-        launch_gps_arg,
+        use_lidar_arg,
+        use_gps_arg,
         foxglove_port_arg,
         gerbil_launch,
         foxglove_bridge,

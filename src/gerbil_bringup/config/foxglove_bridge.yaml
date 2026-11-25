@@ -54,7 +54,7 @@
             - '/scan'
             - '/scan_raw'          # unfiltered, to check the crop keeps the front half
 
-            # ── GPS (u-blox, launch_gps:=true) ─────────────────────────────
+            # ── GPS (u-blox, use_gps:=true) ─────────────────────────────
             - '/fix'
             - '/fix_velocity'
             - '/gps/.*'

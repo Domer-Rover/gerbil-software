@@ -2,26 +2,25 @@
 """Gerbil in Gazebo Fortress, one command.
 
   ros2 launch gerbil_gazebo sim.launch.py
-  ros2 launch gerbil_gazebo sim.launch.py world:=mdrs_utah slam:=true
-  ros2 launch gerbil_gazebo sim.launch.py gui:=false rviz:=false   # CI
+  ros2 launch gerbil_gazebo sim.launch.py world:=mdrs_utah use_slam:=true
+  ros2 launch gerbil_gazebo sim.launch.py use_gui:=false use_rviz:=false   # CI
 
 This is NOT a fork of the robot bringup. It includes the real
 gerbil_bringup/launch/gerbil_nav2.launch.py (or gerbil.launch.xml with
-nav2:=false) and flips only the sim arguments:
+use_nav2:=false) and flips only the sim arguments:
 
-  use_sim_time             true   every node follows the bridged /clock
-  sim_mode                 gazebo xacro swaps RoboClaw for ign_ros2_control
-  launch_ros2_control_node false  the plugin IS the controller_manager
-  launch_spawners          false  spawned here, after the robot exists
-  launch_zed               false  the ZED odom comes from the bridge
-  launch_lidar_driver      false  /scan_raw comes from the bridge, and the
-                                  real laser_filters chain still makes /scan
+  use_sim          true   sim time everywhere, Gazebo URDF (ign_ros2_control),
+                          no ros2_control_node (the plugin IS the
+                          controller_manager), no LD19 driver (/scan_raw comes
+                          from the bridge, the real laser filter still makes
+                          /scan), no ZED (its odom comes from the bridge)
+  use_controllers  false  spawned here instead, after the robot exists
 
 So the EKF, twist_mux, laser_filters, controllers and Nav2 all run with the
 robot's own config files. Topics and frames are pinned in ../README.md.
 
 Startup order:
-  1. Gazebo (server, plus GUI unless gui:=false) loads the world with -r.
+  1. Gazebo (server, plus GUI unless use_gui:=false) loads the world with -r.
   2. In parallel: the bridge, the real bringup (robot_state_publisher, EKF,
      twist_mux, laser_filters, Nav2), RViz and SLAM if asked.
   3. `create` waits for /robot_description, then spawns the model `gerbil`.
@@ -111,15 +110,15 @@ def _launch_setup(context, *args, **kwargs):
     bringup_share = get_package_share_directory('gerbil_bringup')
 
     world = context.launch_configurations['world']
-    nav2 = _flag(context, 'nav2')
-    rviz = _flag(context, 'rviz')
-    foxglove = _flag(context, 'foxglove')
-    slam = _flag(context, 'slam')
-    depth_camera = _flag(context, 'depth_camera')
-    gui = _flag(context, 'gui')
-    headless_rendering = _flag(context, 'headless_rendering')
-    odom_error = _flag(context, 'odom_error')
-    gz_extra = context.launch_configurations['gz_extra_args'].strip()
+    nav2 = _flag(context, 'use_nav2')
+    rviz = _flag(context, 'use_rviz')
+    foxglove = _flag(context, 'use_foxglove')
+    slam = _flag(context, 'use_slam')
+    depth_camera = _flag(context, 'use_sim_depth')
+    gui = _flag(context, 'use_gui')
+    headless_rendering = _flag(context, 'use_headless')
+    odom_error = _flag(context, 'use_odom_error')
+    gz_extra = context.launch_configurations['gz_args'].strip()
 
     world_sdf, spawn = _resolve_world(gazebo_share, world)
 
@@ -176,20 +175,16 @@ def _launch_setup(context, *args, **kwargs):
     # only source of /robot_description (which `create` spawns from and the
     # ign_ros2_control plugin reads).
     bringup_args = {
-        'use_sim_time': 'true',
-        'sim_mode': 'gazebo',
-        'sim_depth_camera': str(depth_camera).lower(),
-        'launch_ros2_control_node': 'false',
-        'launch_spawners': 'false',
-        'launch_zed': 'false',
-        'launch_lidar': 'true',
-        'launch_lidar_driver': 'false',
-        'launch_gps': 'false',
-        'launch_rviz': 'false',     # ours is below, with the sim config
-        'use_mock_hardware': 'false',  # ignored by xacro when sim_mode is gazebo
+        'use_sim': 'true',
+        'use_sim_depth': str(depth_camera).lower(),
+        'use_controllers': 'false',
+        'use_lidar': 'true',
+        'use_gps': 'false',
+        'use_rviz': 'false',     # ours is below, with the sim config
+        'use_mock_hardware': 'false',  # ignored by xacro when use_sim is true
     }
     if nav2:
-        bringup_args['launch_foxglove'] = str(foxglove).lower()
+        bringup_args['use_foxglove'] = str(foxglove).lower()
         bringup_file = os.path.join(bringup_share, 'launch', 'gerbil_nav2.launch.py')
     else:
         bringup_file = os.path.join(bringup_share, 'launch', 'gerbil.launch.xml')
@@ -305,7 +300,7 @@ def _launch_setup(context, *args, **kwargs):
         '"{header: {frame_id: odom}, pose: {position: {x: 3.0}, orientation: {w: 1.0}}}"\n'
         f'  Drop an obstacle 5 m ahead:  ros2 run gerbil_gazebo spawn_obstacle.sh box '
         f'{ahead_x:.2f} {ahead_y:.2f}   (world coordinates)\n'
-        '  Odometry vs truth:           the odom_error lines (odom_error:=false to silence)\n'
+        '  Odometry vs truth:           the odom_error lines (use_odom_error:=false to silence)\n'
         '  Drive by keyboard:           ros2 run gerbil_bringup teleop_keyboard.sh'
     )))
     return actions
@@ -315,20 +310,20 @@ def _launch_setup(context, *args, **kwargs):
 _ARGS = [
     ('world', 'school_loop',
      'Key in config/worlds.yaml: school_loop, mdrs_utah, indiana_dunes'),
-    ('nav2', 'true', 'Run Nav2 (gerbil_nav2.launch.py) on top of the base bringup'),
-    ('rviz', 'true', 'RViz with rviz/sim.rviz. Needs a display'),
-    ('foxglove', 'false', 'foxglove_bridge on port 8765'),
-    ('slam', 'false', 'slam_toolbox with the robot config, building /map alongside'),
-    ('depth_camera', 'false',
+    ('use_nav2', 'true', 'Run Nav2 (gerbil_nav2.launch.py) on top of the base bringup'),
+    ('use_rviz', 'true', 'RViz with rviz/sim.rviz. Needs a display'),
+    ('use_foxglove', 'false', 'foxglove_bridge on port 8765'),
+    ('use_slam', 'false', 'slam_toolbox with the robot config, building /map alongside'),
+    ('use_sim_depth', 'false',
      'Simulated ZED depth cloud on /zed/zed_node/point_cloud/cloud_registered '
      '(costs CPU)'),
-    ('gui', 'true', 'false = Gazebo server only (ign gazebo -s), for CI'),
-    ('headless_rendering', 'false',
-     'With gui:=false and NO X display: render sensors through EGL'),
-    ('odom_error', 'true',
+    ('use_gui', 'true', 'false = Gazebo server only (ign gazebo -s), for CI'),
+    ('use_headless', 'false',
+     'With use_gui:=false and NO X display: render sensors through EGL'),
+    ('use_odom_error', 'true',
      'Run scripts/odom_error.py: EKF vs ground truth every 2 s, plus the '
      'aligned truth for RViz'),
-    ('gz_extra_args', '',
+    ('gz_args', '',
      'Extra args for ign gazebo, e.g. "-v 4" to debug plugin loading'),
 ]
 

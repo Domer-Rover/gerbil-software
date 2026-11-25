@@ -23,7 +23,7 @@ robot software on top:
 
 `src/gerbil_gazebo/launch/sim.launch.py` includes the robot's own
 `gerbil_nav2.launch.py` and changes only the sim switches, such as
-`use_sim_time` and `sim_mode:=gazebo`. A tuning change you make in
+`use_sim:=true` and `use_controllers:=false`. A tuning change you make in
 `gerbil_bringup/config/` therefore applies in sim and on the robot alike.
 
 All of this runs in a Docker container (`gerbil-sim`). The desktop is shown in
@@ -37,7 +37,7 @@ What is simulated and how:
 | RoboClaw and motors | `ign_ros2_control` drives the two wheel joints | Same controller and config as the robot |
 | LD19 LiDAR | `gpu_lidar` sensor, 455 rays, 10 Hz, 12 m, 1 cm noise | Publishes `/scan_raw`. The real laser_filters chain turns it into `/scan` |
 | ZED2i visual odometry | Gazebo `OdometryPublisher` plus white noise (0.01 per twist component), 25 Hz, on `/zed/zed_node/odom` | A **stand-in**: no cameras, no tracking loss, no scale drift |
-| ZED2i depth | Off by default. `depth_camera:=true` adds a 320x180, 5 Hz depth cloud | Costs CPU |
+| ZED2i depth | Off by default. `use_sim_depth:=true` adds a 320x180, 5 Hz depth cloud | Costs CPU |
 | GPS | Not simulated | |
 | Ground truth | `/sim/ground_truth/odom` | **For grading only.** Nothing may fuse it |
 
@@ -125,15 +125,15 @@ From `src/gerbil_gazebo/launch/sim.launch.py`. Pass them as `name:=value`.
 | Argument | Default | Meaning |
 |---|---|---|
 | `world` | `school_loop` | World key in `config/worlds.yaml`: `school_loop`, `mdrs_utah` or `indiana_dunes` |
-| `nav2` | `true` | Run Nav2 on top of the base bringup. `false` gives driving only |
-| `rviz` | `true` | RViz with `rviz/sim.rviz`. Needs a display |
-| `foxglove` | `false` | foxglove_bridge on port 8765 (`ws://localhost:8765` from the Mac) |
-| `slam` | `false` | slam_toolbox with the robot's config, building `/map` alongside. Nav2 still plans in `odom` |
-| `depth_camera` | `false` | Simulated ZED depth cloud on `/zed/zed_node/point_cloud/cloud_registered`. Costs CPU |
-| `gui` | `true` | `false` runs the Gazebo server only (`ign gazebo -s`), with no Gazebo window |
-| `headless_rendering` | `false` | With `gui:=false` and **no** X display at all: render the sensors through EGL. Only for CI. Not needed in the container |
-| `odom_error` | `true` | Run `odom_error.py`: EKF vs ground truth every 2 s, plus the aligned truth arrow in RViz |
-| `gz_extra_args` | (empty) | Extra args for `ign gazebo`, e.g. `gz_extra_args:="-v 4"` to debug plugin loading |
+| `use_nav2` | `true` | Run Nav2 on top of the base bringup. `false` gives driving only |
+| `use_rviz` | `true` | RViz with `rviz/sim.rviz`. Needs a display |
+| `use_foxglove` | `false` | foxglove_bridge on port 8765 (`ws://localhost:8765` from the Mac) |
+| `use_slam` | `false` | slam_toolbox with the robot's config, building `/map` alongside. Nav2 still plans in `odom` |
+| `use_sim_depth` | `false` | Simulated ZED depth cloud on `/zed/zed_node/point_cloud/cloud_registered`. Costs CPU |
+| `use_gui` | `true` | `false` runs the Gazebo server only (`ign gazebo -s`), with no Gazebo window |
+| `use_headless` | `false` | With `use_gui:=false` and **no** X display at all: render the sensors through EGL. Only for CI. Not needed in the container |
+| `use_odom_error` | `true` | Run `odom_error.py`: EKF vs ground truth every 2 s, plus the aligned truth arrow in RViz |
+| `gz_args` | (empty) | Extra args for `ign gazebo`, e.g. `gz_args:="-v 4"` to debug plugin loading |
 
 ## 4. Driving by hand
 
@@ -284,7 +284,7 @@ does: see [exercise 9a](#9-tuning-exercises).
 
 ## 7. Grading odometry
 
-`odom_error.py` starts with the sim (`odom_error:=false` turns it off). It
+`odom_error.py` starts with the sim (`use_odom_error:=false` turns it off). It
 compares the EKF output, `/odometry/filtered`, with the ground truth. Both are
 measured from the pose where both topics first reported, so **leave the robot
 still until the first report prints**. Every 2 s it prints a line like:
@@ -313,7 +313,7 @@ To grade only the wheels, without the EKF:
 ros2 run gerbil_gazebo odom_error.py --ros-args -p estimate_topic:=/diff_drive_controller/odom
 ```
 
-(Run it with `odom_error:=false` on the launch, or two copies print.)
+(Run it with `use_odom_error:=false` on the launch, or two copies print.)
 
 **What good looks like.** The sim does not yet have a baseline. It is
 expected to be optimistic: the floor is flat and grippy, the wheel radius in
@@ -495,12 +495,12 @@ a fix for the robot. Commit sim-only experiments on a branch.
 Everything is drawn by the CPU, so rendering competes with physics. In order
 of impact:
 
-1. **`gui:=false`**: no Gazebo window, and RViz shows you everything Nav2
+1. **`use_gui:=false`**: no Gazebo window, and RViz shows you everything Nav2
    sees. This is the biggest saving. Inside the container, do **not** add
-   `headless_rendering:=true`: the VNC display already serves the sensors.
-2. **`rviz:=false`** when you only need the CLI. The usual setup is
-   `gui:=false` with RViz on.
-3. Keep **`depth_camera:=false`** (the default). It renders a second camera.
+   `use_headless:=true`: the VNC display already serves the sensors.
+2. **`use_rviz:=false`** when you only need the CLI. The usual setup is
+   `use_gui:=false` with RViz on.
+3. Keep **`use_sim_depth:=false`** (the default). It renders a second camera.
 4. If you keep the Gazebo GUI, close the side panels (entity tree, component
    inspector) and make the window small.
 5. Give Docker more CPUs (section 2).
@@ -521,8 +521,8 @@ performance issue.
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| Gazebo window is black or fails to create a GL context | ogre2 cannot get a GL context from llvmpipe | Per `docker/README.md`: try `MESA_GL_VERSION_OVERRIDE=4.5 ros2 launch ...`, or the old render engine for the GUI with `gz_extra_args:="--render-engine ogre"`. Or run `gui:=false` and use RViz |
-| `diff_drive_controller` never reaches active, spawner errors | The spawners wait up to 120 s for `/controller_manager`, which exists only after the robot is spawned | Check `[gerbil sim] gerbil spawned` printed. If spawning failed, the launch shuts itself down with a message. Rerun with `gz_extra_args:="-v 4"` and look for `ign_ros2_control` errors. Check with `ros2 control list_controllers` |
+| Gazebo window is black or fails to create a GL context | ogre2 cannot get a GL context from llvmpipe | Per `docker/README.md`: try `MESA_GL_VERSION_OVERRIDE=4.5 ros2 launch ...`, or the old render engine for the GUI with `gz_args:="--render-engine ogre"`. Or run `use_gui:=false` and use RViz |
+| `diff_drive_controller` never reaches active, spawner errors | The spawners wait up to 120 s for `/controller_manager`, which exists only after the robot is spawned | Check `[gerbil sim] gerbil spawned` printed. If spawning failed, the launch shuts itself down with a message. Rerun with `gz_args:="-v 4"` and look for `ign_ros2_control` errors. Check with `ros2 control list_controllers` |
 | No `/scan` | Bridge or laser_filters chain | `ros2 topic hz /scan_raw` (bridge, from the gpu_lidar). If that is fine, `ros2 topic hz /scan` (laser_filters). No `/scan_raw` usually means the sensors did not render: see the black-window row |
 | Nav2 says "Timed out waiting for transform from base_footprint to odom" | The EKF has no input yet | Normal until the controllers are active. If it persists, check `ros2 topic hz /diff_drive_controller/odom` and `/zed/zed_node/odom` |
 | A goal fails at once | Goal outside the 20 x 20 m global costmap, or inside a wall | Section 5 and exercise 9b. Remember that goals are odom, spawn-relative |
@@ -544,7 +544,7 @@ Do not carry a result to the robot without these in mind:
   slip, no carpet and no ramps. Wheel odometry is near-perfect.
 - **The ZED is a stand-in.** It has white noise only: no scale drift (the real
   one reads -7.9% over 3 m), no tracking loss and no latency spikes. No depth
-  unless `depth_camera:=true`, and that cloud is a low-res Gazebo depth camera,
+  unless `use_sim_depth:=true`, and that cloud is a low-res Gazebo depth camera,
   not ZED stereo.
 - **The LiDAR sees visuals**, not collision shapes. That makes no difference
   for the primitive models here.

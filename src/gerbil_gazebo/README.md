@@ -8,9 +8,9 @@ Gazebo **Fortress** (Ignition, the Humble pairing) simulation of Gerbil. It runs
 All sim work is built against this contract. Change it only in a deliberate, reviewed commit.
 
 ### Robot description
-- xacro arg `sim_mode` takes `none` or `gazebo` and defaults to `none`.
-  - `none` behaves exactly as before: `use_mock_hardware` picks `mock_components` or `gerbil_hw`.
-  - `gazebo` uses `ign_ros2_control/IgnitionSystem` as the ros2_control hardware, and
+- xacro arg `use_sim` (default `false`). `use_sim_depth` (default `false`) adds the depth camera.
+  - `false` behaves exactly as before: `use_mock_hardware` picks `mock_components` or `gerbil_hw`.
+  - `true` uses `ign_ros2_control/IgnitionSystem` as the ros2_control hardware, and
     `gerbil_description/urdf/gerbil.gazebo.xacro` is included, which carries the plugins, sensors and
     friction.
 - Gazebo mode adds no links or joints that the real robot lacks, so the TF tree is identical.
@@ -52,12 +52,18 @@ The world SDF must load these systems: Physics, UserCommands, SceneBroadcaster, 
 In sim, the ZED-stand-in odom message uses `child_frame_id: zed_camera_link`, matching the real
 wrapper.
 
-### Time
-Every node runs with `use_sim_time: true` in sim. The real-robot launch defaults are unchanged
-(`use_sim_time` defaults to false).
+### Bringup launch args (gerbil.launch.xml, gerbil_nav2.launch.py)
+| Arg | Default | Under sim |
+|---|---|---|
+| `use_sim` | `false` | `true`. Every node gets `use_sim_time: true`, xacro builds the Gazebo variant, and `ros2_control_node`, the LD19 driver and the ZED are not started (the laser filter still is) |
+| `use_sim_depth` | `false` | optional depth cloud |
+| `use_controllers` | `true` | `false`, because sim.launch.py spawns the controllers after the robot exists |
+
+The renamed real-robot args (`use_lidar`, `use_zed`, `use_gps`, `use_rviz`, `use_foxglove`, formerly
+`launch_*`) keep their old defaults.
 
 ### Launch
-`ros2 launch gerbil_gazebo sim.launch.py world:=school_loop|mdrs_utah|indiana_dunes rviz:=true nav2:=true`
+`ros2 launch gerbil_gazebo sim.launch.py world:=school_loop|mdrs_utah|indiana_dunes use_rviz:=true use_nav2:=true`
 
 ### Worlds
 | World | What |
